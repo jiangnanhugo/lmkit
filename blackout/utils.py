@@ -96,11 +96,11 @@ class TextIterator:
 
 def prepare_data(seqs_x):
     lengths_x=[len(s)-1 for s in seqs_x]
-    n_samples=len(seqs_x)
+    n_batch=len(seqs_x)
     maxlen_x=np.max(lengths_x)
 
-    x=np.zeros((maxlen_x,n_samples)).astype('int32')
-    y=np.zeros((maxlen_x,n_samples)).astype('int32')
+    x=np.zeros((maxlen_x,n_batch)).astype('int32')
+    y=np.zeros((maxlen_x,n_batch)).astype('int32')
 
     for idx,s_x in enumerate(seqs_x):
         x[:lengths_x[idx],idx]=s_x[:-1]
