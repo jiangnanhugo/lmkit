@@ -24,7 +24,7 @@ class Softmaxlayer(object):
 
 class H_Softmax(object):
 
-    def __init__(self,shape,x,y_node,y_choice,y_bit_mask,maskY):
+    def __init__(self,shape,x,y_node,y_choice,y_bit_mask,maskY,mode='matrix'):
         self.prefix='h_softmax_'
 
         self.in_size,self.out_size=shape
@@ -39,22 +39,39 @@ class H_Softmax(object):
                                              high=np.sqrt(6. / (self.in_size + 2)),
                                              size=(self.out_size, self.in_size)), dtype=theano.config.floatX)
         self.wp_matrix = theano.shared(value=wp_val, name="V_soft", borrow=True)
+        init_b = np.zeros((self.out_size,), dtype=theano.config.floatX)
+        self.bias=theano.shared(value=init_b,name='bias',borrow=True)
 
-        self.params = [self.wp_matrix, ]
-        self.build_graph()
-        #self.build_predict()
+        self.params = [self.wp_matrix, self.bias]
+        if mode=='matrix':
+            self.matrix_build()
+        elif mode == 'vector':
+            self.vector_build()
 
-
-
-    def build_graph(self):
+    # One giant matrix mul
+    def matrix_build(self):
         wp=self.wp_matrix[self.y_node]
+        node_bias=self.bias[self.y_node]
         # feature.dimshuffle(0,1,'x',2)
         node=T.sum(wp * self.x.dimshuffle(0,1,'x',2),axis=-1)
+        node+=node_bias
 
         log_sigmoid=-T.sum(T.log(T.nnet.sigmoid(node*self.y_choice))*self.y_bit_mask,axis=-1)
         #log_sigmoid=T.mean(T.log(1+T.exp(-node*self.y_choice))*self.y_bit_mask,axis=-1)
         self.activation=T.sum(log_sigmoid*self.maskY )/self.maskY.sum()
 
+    # Many tiny matrix muls
+    def vector_build(self):
+        def _step(cur_node,cur_bit_mask,prev_logprob,input_vector):
+            node_probs=T.nnet.sigmoid(T.sum(self.wp_matrix[cur_node]*input_vector,axis=-1))*cur_bit_mask
+            logprob=prev_logprob+T.log(node_probs)
+            return logprob
+        logprobs,_=theano.scan(fn=_step,
+                    sequences=[self.y_node,self.y_bit_mask],
+                    outputs_info=[None],
+                    non_sequences=self.x)
+
+        self.activation=T.sum(logprobs*self.maskY)/self.maskY.sum()
 
 
     def build_predict(self):
