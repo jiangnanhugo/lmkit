@@ -29,6 +29,7 @@ argument.add_argument('--test_file', default='../data/ptb/idx_ptb.test.txt', typ
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=5, type=int, help='batch size')
 argument.add_argument('--brown_or_huffman', default='huffman', type=str, help='brown or huffman')
+argument.add_argument('--matrix_or_vector',default='vector',type=str,help='use matrix or vector to build hierarchical softmax')
 
 
 args = argument.parse_args()
@@ -41,6 +42,7 @@ test_datafile=args.test_file
 n_batch=args.batch_size
 vocabulary_size=args.vocab_size
 brown_or_huffman=args.brown_or_huffman
+matrix_or_vector=args.matrix_or_vector
 model_dir=args.model_dir
 reload_dumps=args.reload_dumps
 
@@ -66,11 +68,11 @@ def train(lr):
     # Load data
     print 'loading dataset...'
 
-    train_data=TextIterator(train_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman)
-    valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman)
-    test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman)
+    train_data=TextIterator(train_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
     print 'building model...'
-    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
     if os.path.exists(model_dir) and reload_dumps==1:
         model=load_model(model_dir,model)
     else:

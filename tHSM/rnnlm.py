@@ -6,11 +6,11 @@ from lstm import LSTM
 from updates import *
 
 class RNNLM(object):
-    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5):
+    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5,mode='vector'):
         self.x=T.imatrix('batched_sequence_x')  # n_batch, maxlen
         self.x_mask=T.fmatrix('x_mask')
         self.y_node=T.itensor3('batched_node_y')
-        self.y_choice=T.itensor3('batched_choice_y')
+        self.y_choice=T.ftensor3('batched_choice_y')
         self.y_bit_mask=T.ftensor3('batched_bit_mask_y')
         self.y_mask=T.fmatrix('y_mask')
         
@@ -26,6 +26,7 @@ class RNNLM(object):
         self.cell=cell
         self.optimizer=optimizer
         self.p=p
+        self.mode=mode
         self.is_train=T.iscalar('is_train')
         self.n_batch=T.iscalar('n_batch')
 
@@ -49,7 +50,7 @@ class RNNLM(object):
         softmax_shape=(self.n_hidden,self.n_output)
         output_layer=H_Softmax(softmax_shape,
                                hidden_layer.activation,
-                               self.y_node,self.y_choice,self.y_bit_mask,self.y_mask)
+                               self.y_node,self.y_choice,self.y_bit_mask,self.y_mask,mode=self.mode)
         self.params=[self.E,]
         self.params+=hidden_layer.params
         self.params+=output_layer.params

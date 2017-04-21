@@ -24,11 +24,11 @@ class Softmaxlayer(object):
 
 class H_Softmax(object):
 
-    def __init__(self,shape,x,y_node,y_choice,y_bit_mask,maskY,mode='matrix'):
+    def __init__(self,shape,x,y_node,y_choice,y_bit_mask,maskY,mode='vector'):
         self.prefix='h_softmax_'
 
         self.in_size,self.out_size=shape
-        # in_size:size,mb_size=out_size
+        # in_size:hidden_size,out_size: vocabulary_size
         self.x=x
         self.y_node=y_node
         self.y_choice=y_choice
@@ -62,14 +62,26 @@ class H_Softmax(object):
 
     # Many tiny matrix muls
     def vector_build(self):
-        def _step(cur_node,cur_bit_mask,prev_logprob,input_vector):
-            node_probs=T.nnet.sigmoid(T.sum(self.wp_matrix[cur_node]*input_vector,axis=-1))*cur_bit_mask
-            logprob=prev_logprob+T.log(node_probs)
+        def _step(cur_node,cur_choice,cur_bit_mask,prev_logprob,input_vector):
+            """
+            :param cur_node: 
+            :param cur_choice: 
+            :param cur_bit_mask: 
+            self.wp_matrix[cur_node]: [n_len,n_batch,n_hidden]
+            :param prev_logprob: [n_len,n_batch]
+            :param input_vector: [n_len,n_batch,n_hidden]
+            :return: 
+            """
+            node=T.sum(self.wp_matrix[cur_node]*input_vector+self.bias[cur_node],axis=-1)
+
+            node_probs=T.nnet.sigmoid(node*cur_choice)*cur_bit_mask
+            logprob=prev_logprob-T.log(node_probs)
             return logprob
         logprobs,_=theano.scan(fn=_step,
-                    sequences=[self.y_node,self.y_bit_mask],
-                    outputs_info=[None],
+                    sequences=[self.y_node,self.y_choice,self.y_bit_mask],
+                    outputs_info=dict(initial=T.zeros((self.x.shape[:-1]),dtype=theano.config.floatX)),
                     non_sequences=self.x)
+        logprobs=logprobs[-1] # only the last steps of the
 
         self.activation=T.sum(logprobs*self.maskY)/self.maskY.sum()
 

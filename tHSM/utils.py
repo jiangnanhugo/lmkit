@@ -1,4 +1,5 @@
 import numpy as np
+np.set_printoptions(threshold=np.inf)
 import cPickle as pickle
 import Queue
 
@@ -14,8 +15,8 @@ def load_model(f,model):
         p.set_value(ps[p.name])
     return model
 
-class TextIterator:
-    def __init__(self,source,filepath,n_batch,maxlen=None,n_words_source=-1,brown_or_huffman=0):
+class TextIterator(object):
+    def __init__(self,source,filepath,n_batch,maxlen=None,n_words_source=-1,brown_or_huffman='huffman',mode='vector'):
 
         self.source=open(source,'r')
         if brown_or_huffman=='brown':
@@ -30,10 +31,16 @@ class TextIterator:
         self.maxlen=maxlen
         self.n_words_source=n_words_source
         self.end_of_data=False
+        self.mode=mode
 
     def reconstruct(self,y):
-        return self.nodes[y],self.choices[y],self.bitmasks[y]
-
+        if self.mode=='matrix':
+            return self.nodes[y],self.choices[y],self.bitmasks[y]
+        elif self.mode=='vector':
+            # rotate the matrix could just solve the problems.
+            return self.nodes[y].transpose((2,0,1)),\
+                   self.choices[y].transpose((2,0,1)),\
+                   self.bitmasks[y].transpose((2,0,1))
 
     def __iter__(self):
         return self
@@ -81,7 +88,6 @@ def prepare_data(seqs_x):
     y=np.zeros((maxlen_x,n_samples)).astype('int32')
     x_mask=np.zeros((maxlen_x,n_samples)).astype('float32')
     y_mask=np.zeros((maxlen_x,n_samples)).astype('float32')
-
     for idx,s_x in enumerate(seqs_x):
         x[:lengths_x[idx],idx]=s_x[:-1]
         y[:lengths_x[idx],idx]=s_x[1:]
@@ -89,8 +95,6 @@ def prepare_data(seqs_x):
         y_mask[:lengths_x[idx],idx]=1
 
     return x,x_mask,y,y_mask
-
-
 
 class Node(object):
     def __init__(self,left=None,right=None,index=None):
@@ -113,7 +117,6 @@ class Node(object):
             polarity=[]
         if param is None:
             param=[]
-
         if self.left:
             if isinstance(self.left[1],Node):
                 self.left[1].preorder(polarity+[-1],param+[self.index],collector)
@@ -152,8 +155,9 @@ def load_huffman_prefix(freq_file):
     vocab_size=len(x)
     maxlen=np.max(length_x)
     nodes=np.zeros((vocab_size,maxlen),dtype='int32')
-    choices=np.zeros((vocab_size,maxlen),dtype='int32')
+    choices=np.zeros((vocab_size,maxlen),dtype='float32')
     bit_masks=np.zeros((vocab_size,maxlen),dtype='float32')
+
     for idx,node,choice in x:
         nodes[idx,:length_x[idx]]=node
         choices[idx,:length_x[idx]]=choice
@@ -213,4 +217,13 @@ def build_brown_node(local_choice,maxlen):
 
 
 if __name__=='__main__':
-    load_brown_prefix('idx_wiki.train-c50-p1.out/paths')
+    #load_brown_prefix('idx_wiki.train-c50-p1.out/paths')
+    '''
+    train_data = TextIterator('../data/ptb/idx_ptb.train.txt', '../data/ptb/frequenties.pkl', n_words_source=-1, n_batch=5,
+                              brown_or_huffman='huffman', mode='matrix')
+    for x,x_mask,(y_node,y_choice,y_bit_mask),y_mask in train_data:
+        print '-'*80
+        print y_node
+        print '='*80
+        print y.transpose()
+    '''
