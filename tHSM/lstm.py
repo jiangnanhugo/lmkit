@@ -78,7 +78,7 @@ class LSTM:
         '''
         def _recurrence(x_t,m,h_tm1,c_tm1):
             x_e=self.E[x_t,:]
-            concated=T.concatenate([x_e,h_tm1])
+            concated=T.concatenate([x_e,h_tm1],axis=-1)
 
             # Forget gate
             f_t=self.f(T.dot(concated,self.Wf) + self.bf)
@@ -103,16 +103,17 @@ class LSTM:
         [h,c],_=theano.scan(fn=_recurrence,
                             sequences=[self.x,self.mask],
                             truncate_gradient=-1,
-                            output_info=[dict(initial=T.zeros(self.n_hidden)),
-                                         dict(initial=T.zeros(self.n_hidden))])
-
+                            outputs_info=[dict(initial=T.zeros((self.n_batch,self.n_hidden))),
+                                          dict(initial=T.zeros((self.n_batch,self.n_hidden)))])
+        self.activation=h
+        '''
         # Dropout
         if self.p>0:
             drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
             self.activation=T.switch(T.eq(self.is_train,1),h*drop_mask,h*(1-self.p))
         else:
             self.activation=T.switch(T.eq(self.is_train,1),h,h)
-        
+        '''
 
         
             

@@ -2,7 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-class GRU:
+class GRU(object):
     def __init__(self,rng,
                  n_input,n_hidden,n_batch,
                  x,E,mask,
@@ -89,11 +89,12 @@ class GRU:
                         truncate_gradient=-1)
 
         # Dropout
+
         if self.p>0:
             drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
-            self.activation=T.switch(T.eq(self.is_train,1),h*drop_mask,h*(1-self.p))
+            self.activation=T.switch(self.is_train,h*drop_mask,h*(1-self.p))
         else:
-            self.activation=T.switch(T.eq(self.is_train,1),h,h)
-            
+            self.activation=T.switch(self.is_train,h,h)
+  
                 
         
