@@ -25,6 +25,10 @@ class TextIterator(object):
     def __iter__(self):
         return self
 
+    def goto_line(self, line_index):
+        for _ in range(line_index):
+            self.source.readline()
+
     def reset(self):
         self.source.seek(0)
 

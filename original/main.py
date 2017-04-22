@@ -20,6 +20,7 @@ argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', t
 argument.add_argument('--valid_file', default='../data/ptb/idx_ptb.valid.txt', type=str, help='valid dir')
 argument.add_argument('--test_file', default='../data/ptb/idx_ptb.test.txt', type=str, help='test dir')
 argument.add_argument('--model_dir', default='./model/parameters_176832.65.pkl', type=str, help='model dir to dump')
+argument.add_argument('--goto_line', default=10, type=int, help='goto the specific line index')
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=10, type=int, help='batch size')
 argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
@@ -32,6 +33,8 @@ args = argument.parse_args()
 train_datafile=args.train_file
 valid_datafile=args.valid_file
 test_datafile=args.test_file
+model_dir=args.model_dir
+goto_line=args.goto_line
 n_batch=args.batch_size
 vocabulary_size=args.vocab_size
 optimizer= args.optimizer
@@ -63,8 +66,10 @@ def train(lr):
     test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch)
     print 'building model...'
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
-    if os.path.isfile(args.model_dir):
-        model=load_model(args.model_dir,model)
+    if os.path.isfile(model_dir):
+        model=load_model(model_dir,model)
+    if goto_line!=0:
+        train_data.goto_line(goto_line)
     print 'training start...'
     start=time.time()
     idx=0
