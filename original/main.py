@@ -9,8 +9,8 @@ import sys
 
 lr=0.001
 p=0.1
-NEPOCH=200
-
+NEPOCH=100
+maxlen=256
 n_input=256
 n_hidden=256
 cell='gru'
@@ -40,45 +40,50 @@ vocabulary_size=args.vocab_size
 optimizer= args.optimizer
 n_words_source=-1
 disp_freq=10
-valid_freq=1000
-test_freq=2000
-save_freq=20000
+valid_freq=2000
+test_freq=400
+save_freq=9000
 clip_freq=9000
 pred_freq=20000
 
 def evaluate(test_data,model):
-    sumed_cost=[]
+    sumed_cost=0
     #sumed_wer=[]
     #n_words=[]
+    idx=0
     for x,x_mask,y,y_mask in test_data:
-        cost,pred_y=model.test(x,x_mask,y,y_mask,x.shape[1])
+        nll=model.test(x,x_mask,y,y_mask)
         #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
-        sumed_cost.append(cost)
+        sumed_cost+=nll
+        #print cost,nll,np.sum(y_mask)
+        idx+=1#np.sum(y_mask)
         #n_words.append(np.sum(y_mask))
 
-    return np.average(sumed_cost)#,np.sum(sumed_wer)/np.sum(n_words)
+    return sumed_cost/(1.0*idx)#,np.sum(sumed_wer)/np.sum(n_words)
 
 def train(lr):
     print 'loading dataset...'
 
-    train_data=TextIterator(train_datafile,n_words_source=n_words_source,n_batch=n_batch)
-    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch)
-    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch)
+    train_data=TextIterator(train_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
+    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
+    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
     print 'building model...'
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
     if os.path.isfile(model_dir):
+        print 'loading checkpoint parameters....',model_dir
         model=load_model(model_dir,model)
     if goto_line!=0:
         train_data.goto_line(goto_line)
     print 'training start...'
     start=time.time()
-    idx=0
+    idx=goto_line
     for epoch in xrange(NEPOCH):
         error=0
         for x,x_mask,y,y_mask in train_data:
             idx+=1
-            cost=model.train(x,x_mask,y,y_mask,x.shape[1],lr)
+            cost=model.train(x,x_mask,y,y_mask,lr)
             error+=cost
+            #print nll
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
@@ -115,10 +120,13 @@ def test():
     print 'building model...'
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
     if os.path.isfile(args.model_dir):
+        print 'loading pretrained model'
         model=load_model(args.model_dir,model)
+    else:
+        print args.model_dir,'not found'
     print 'testing start...'
-    mean_cost,mean_wer=evaluate(test_data,model)
-    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost),"word_error_rate:",mean_wer
+    mean_cost=evaluate(test_data,model)
+    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
 
 
 if __name__ == '__main__':
