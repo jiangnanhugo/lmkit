@@ -4,20 +4,23 @@ from rnnlm import *
 from utils import TextIterator,save_model,load_model
 
 import logging
+from logging.config import fileConfig
+fileConfig('../logging_config.ini')
+logger=logging.getLogger()
 from argparse import ArgumentParser
 import sys
 import os
 import numpy
 numpy.set_printoptions(threshold=numpy.nan)
 
-lr=0.5
-p=0
-NEPOCH=200
+lr=0.001
+p=0.1
+NEPOCH=6
 
 n_input=256
 n_hidden=256
 cell='gru'
-optimizer='sgd'
+optimizer='adam'
 
 argument = ArgumentParser(usage='it is usage tip', description='no')
 argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', type=str, help='train dir')
@@ -30,6 +33,7 @@ argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size'
 argument.add_argument('--batch_size', default=5, type=int, help='batch size')
 argument.add_argument('--brown_or_huffman', default='huffman', type=str, help='brown or huffman')
 argument.add_argument('--matrix_or_vector',default='vector',type=str,help='use matrix or vector to build hierarchical softmax')
+argument.add_argument('--mode',default='train',type=str,help='train/valid/test')
 
 
 args = argument.parse_args()
@@ -44,73 +48,91 @@ vocabulary_size=args.vocab_size
 brown_or_huffman=args.brown_or_huffman
 matrix_or_vector=args.matrix_or_vector
 model_dir=args.model_dir
+mode=args.mode
 reload_dumps=args.reload_dumps
-
 
 n_words_source=-1
 disp_freq=20
 valid_freq=1000
-test_freq=2000
-save_freq=20000
-clip_freq=9000
-pred_freq=20000
-
+test_freq=1000
+save_freq=5000
+#clip_freq=9000
+#pred_freq=20000
 
 def evaluate(test_data,model):
-    cost=0
+    nll=0
     index=0
     for x,x_mask,(y_node,y_choice,y_bit_mask),y_mask in test_data:
-        index+=1
-        cost+=model.test(x,x_mask,y_node,y_choice,y_bit_mask,y_mask,x.shape[1])
-    return cost/index
+        index+=np.sum(y_mask)
+        nll+=model.test(x,x_mask,y_node,y_choice,y_bit_mask,y_mask)
+    return nll/(index*1.)
 
 def train(lr):
     # Load data
-    print 'loading dataset...'
+    logger.info('loading dataset...')
 
     train_data=TextIterator(train_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
     valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
     test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    print 'building model...'
+    logger.info('building model...')
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
     if os.path.exists(model_dir) and reload_dumps==1:
+        print 'loading parameters from:',model_dir
         model=load_model(model_dir,model)
     else:
-        os.makedirs(os.path.dirname(model_dir))
-    print 'training start...'
+        print "init parameters...."
+    logger.info( 'training start...')
     start=time.time()
     idx=0
     for epoch in xrange(NEPOCH):
         error=0
         for x,x_mask,(y_node,y_choice,y_bit_mask),y_mask in train_data:
             idx+=1
-            cost=model.train(x,x_mask,y_node,y_choice,y_bit_mask,y_mask,x.shape[1],lr)
+            cost=model.train(x,x_mask,y_node,y_choice,y_bit_mask,y_mask,lr)
             error+=cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq==0:
-                print 'epoch:',epoch,'idx:',idx,'cost:',error/disp_freq,'ppl:',np.exp(error/disp_freq),'lr:',lr
+                logger.info( 'epoch: %d idx: %d cost: %f ppl: %f'%(epoch,idx,error/disp_freq,np.exp(error/(1.0*disp_freq))))#,'lr:',lr
                 error=0
             if idx%save_freq==0:
-                print 'dumping...'
-                save_model(model_dir,model)
+                logger.info('dumping...')
+                save_model('./model/parameters_%.2f.pkl'%(time.time()-start),model)
             if idx % valid_freq==0:
-                print 'validing....'
+                logger.info( 'validing....')
                 valid_cost=evaluate(valid_data,model)
-                print 'valid_cost:',valid_cost,'perplexity:',np.exp(valid_cost)
+                logger.info('valid_cost: %f perplexity: %f'%(valid_cost,np.exp(valid_cost)))
             if idx % test_freq==0:
-                print 'testing...'
+                logger.info('testing...')
                 test_cost=evaluate(test_data,model)
-                print 'test cost:',test_cost,'perplexity:',np.exp(test_cost)
-            if idx%clip_freq==0 and lr >=0.01:
-                print 'cliping learning rate:',
-                lr=lr*0.9
-                print lr
+                logger.info('test cost: %f perplexity: %f' %(test_cost,np.exp(test_cost)))
+            #if idx%clip_freq==0 and lr >=0.01:
+            #    print 'cliping learning rate:',
+            #    lr=lr*0.9
+            #    print lr
         sys.stdout.flush()
 
     print "Finished. Time = "+str(time.time()-start)
 
 
+def test():
+    valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
+    if os.path.isfile(args.model_dir):
+        print 'loading pretrained model:',args.model_dir
+        model=load_model(args.model_dir,model)
+    else:
+        print args.model_dir,'not found'
+    mean_cost=evaluate(valid_data,model)
+    print 'valid cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
+    mean_cost=evaluate(test_data,model)
+    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)
+
+
 if __name__ == '__main__':
-    train(lr=lr)
+        if args.mode=='train':
+            train(lr=lr)
+        elif args.mode=='testing':
+            test()

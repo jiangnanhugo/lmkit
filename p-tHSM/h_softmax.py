@@ -53,8 +53,8 @@ class H_Softmax(object):
         wp=self.wp_matrix[self.y_node]
         node_bias=self.bias[self.y_node]
         # feature.dimshuffle(0,1,'x',2)
-        node=T.sum(wp * self.x.dimshuffle(0,1,'x',2),axis=-1)
-        node+=node_bias
+        node=T.sum(wp * self.x.dimshuffle(0,1,'x',2),axis=-1)+node_bias
+        #node+=node_bias
 
         log_sigmoid=-T.sum(T.log(T.nnet.sigmoid(node*self.y_choice))*self.y_bit_mask,axis=-1)
         #log_sigmoid=T.mean(T.log(1+T.exp(-node*self.y_choice))*self.y_bit_mask,axis=-1)
@@ -62,7 +62,7 @@ class H_Softmax(object):
 
     # Many tiny matrix muls
     def vector_build(self):
-        def _step(cur_node,cur_choice,cur_bit_mask,prev_logprob,input_vector):
+        def _step(cur_node,cur_choice,cur_bit_mask,prev_logprob):
             """
             :param cur_node: 
             :param cur_choice: 
@@ -72,16 +72,19 @@ class H_Softmax(object):
             :param input_vector: [n_len,n_batch,n_hidden]
             :return: 
             """
-            node=T.sum(self.wp_matrix[cur_node]*input_vector+self.bias[cur_node],axis=-1)
+            wp=self.wp_matrix[cur_node]
+            node_bias=self.bias[cur_node]
+            node=T.sum(wp * self.x, axis=-1)+node_bias
+            #node=T.sum(self.wp_matrix[cur_node]*input_vector+self.bias[cur_node],axis=-1)
 
-            node_probs=T.nnet.sigmoid(node*cur_choice)*cur_bit_mask
-            logprob=prev_logprob-T.log(node_probs)
+            log_sigmoid=T.log(T.nnet.sigmoid(node*cur_choice))*cur_bit_mask
+            logprob=prev_logprob-log_sigmoid
             return logprob
         logprobs,_=theano.scan(fn=_step,
                     sequences=[self.y_node,self.y_choice,self.y_bit_mask],
-                    outputs_info=dict(initial=T.zeros((self.x.shape[:-1]),dtype=theano.config.floatX)),
-                    non_sequences=self.x)
-        logprobs=logprobs[-1] # only the last steps of the
+                    outputs_info=dict(initial=T.zeros((self.x.shape[:-1]),dtype=theano.config.floatX)))
+
+        logprobs=logprobs[-1]# only the last steps of the
 
         self.activation=T.sum(logprobs*self.maskY)/self.maskY.sum()
 
