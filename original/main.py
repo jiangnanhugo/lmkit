@@ -10,7 +10,6 @@ import sys
 lr=0.001
 p=0.1
 NEPOCH=100
-maxlen=256
 n_input=256
 n_hidden=256
 cell='gru'
@@ -25,10 +24,16 @@ argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size'
 argument.add_argument('--batch_size', default=10, type=int, help='batch size')
 argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
 argument.add_argument('--mode',default='train',type=str,help='train/valid/test')
+argument.add_argument('--maxlen',default=256,type=int,help='constrain the maxlen for training')
+argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
+argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
+argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
+
+
 
 
 args = argument.parse_args()  
-
+print args
 
 train_datafile=args.train_file
 valid_datafile=args.valid_file
@@ -38,13 +43,12 @@ goto_line=args.goto_line
 n_batch=args.batch_size
 vocabulary_size=args.vocab_size
 optimizer= args.optimizer
+maxlen=args.maxlen
 n_words_source=-1
-disp_freq=10
-valid_freq=2000
-test_freq=400
-save_freq=9000
-clip_freq=9000
-pred_freq=20000
+disp_freq=5
+valid_freq=args.valid_freq
+test_freq=args.test_freq
+save_freq=args.save_freq
 
 def evaluate(test_data,model):
     sumed_cost=0
@@ -55,18 +59,15 @@ def evaluate(test_data,model):
         nll=model.test(x,x_mask,y,y_mask)
         #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
         sumed_cost+=nll
-        #print cost,nll,np.sum(y_mask)
-        idx+=1#np.sum(y_mask)
+        idx+=np.sum(y_mask)
         #n_words.append(np.sum(y_mask))
-
     return sumed_cost/(1.0*idx)#,np.sum(sumed_wer)/np.sum(n_words)
 
 def train(lr):
     print 'loading dataset...'
-
-    train_data=TextIterator(train_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
-    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
-    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=256)
+    train_data=TextIterator(train_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
+    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
+    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
     print 'building model...'
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
     if os.path.isfile(model_dir):
@@ -74,6 +75,7 @@ def train(lr):
         model=load_model(model_dir,model)
     if goto_line!=0:
         train_data.goto_line(goto_line)
+        print 'goto line:',goto_line
     print 'training start...'
     start=time.time()
     idx=goto_line
@@ -83,7 +85,6 @@ def train(lr):
             idx+=1
             cost=model.train(x,x_mask,y,y_mask,lr)
             error+=cost
-            #print nll
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
@@ -101,36 +102,34 @@ def train(lr):
                 print 'testing...'
                 mean_cost=evaluate(test_data,model)
                 print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
-            if idx % pred_freq==0:
-                print 'predicting...'
-                prediction=model.predict(x,x_mask,x.shape[1])
-                print prediction[:100]
+            #if idx % pred_freq==0:
+            #    print 'predicting...'
+            #    prediction=model.predict(x,x_mask,x.shape[1])
+            #    print prediction[:100]
             #if idx%clip_freq==0 and lr >=1e-2:
             #    print 'cliping learning rate:',
             #    lr=lr*0.9
             #    print lr
         sys.stdout.flush()
-
     print "Finished. Time = "+str(time.time()-start)
 
 def test():
-    print 'loading dataset...'
-
     test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch)
-    print 'building model...'
+    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch)
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
     if os.path.isfile(args.model_dir):
-        print 'loading pretrained model'
+        print 'loading pretrained model:',args.model_dir
         model=load_model(args.model_dir,model)
     else:
         print args.model_dir,'not found'
-    print 'testing start...'
+    mean_cost=evaluate(valid_data,model)
+    print 'valid cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
     mean_cost=evaluate(test_data,model)
-    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
+    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)
 
 
 if __name__ == '__main__':
     if args.mode=='train':
         train(lr=lr)
-    elif args.mode=='test':
+    elif args.mode=='testing':
         test()

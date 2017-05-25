@@ -3,7 +3,7 @@ from utils import *
 from grulm import GRULM
 from argparse import ArgumentParser
 
-lr=0.01
+lr=0.001
 p=0.1
 
 NEPOCH=100
@@ -17,8 +17,8 @@ argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', t
 argument.add_argument('--valid_file', default='../data/ptb/idx_ptb.valid.txt', type=str, help='valid dir')
 argument.add_argument('--test_file', default='../data/ptb/idx_ptb.test.txt', type=str, help='test dir')
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
-argument.add_argument('--batch_size', default=10, type=int, help='batch size')
-argument.add_argument('--vocab_freq_file', default='../data/ptb/vocab_freq.pkl', type=str, help='vocab_freq')
+argument.add_argument('--batch_size', default=20, type=int, help='batch size')
+argument.add_argument('--vocabfreq_file', default='../data/ptb/vocab_freq.pkl', type=str, help='vocab_freq')
 argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
 
 args = argument.parse_args()
@@ -29,29 +29,30 @@ valid_datafile=args.valid_file
 test_datafile=args.test_file
 vocabulary_size=args.vocab_size
 n_batch=args.batch_size
-vocab_freq_file=args.vocab_freq_file
+vocab_freq_file=args.vocabfreq_file
 optimizer= args.optimizer
 n_words_source=-1
 
 
-disp_freq=100
+disp_freq=25
 sample_freq=200
 save_freq=5000
-valid_freq=1000
-test_freq=2000
+valid_freq=200
+test_freq=20
 clip_freq=5000
 
 
-k = 200
+k = vocabulary_size/20
 alpha = 0.75
 
 def evaluate(test_data,model):
     cost=0
     index=0
     for (x,y) in test_data:
-        index+=1
-        predict_eror=model.test(x,y)
-        cost+=predict_eror/len(x)
+        predict_error=model.test(x,y)
+        index+=predict_error.shape[0]
+        #print np.mean(predict_error),np.sum(predict_error),predict_error.shape[0]
+        cost+=np.sum(predict_error)
     return cost/index
 
 def train(lr):
