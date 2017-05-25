@@ -39,20 +39,23 @@ class TextIterator(object):
             nodes = self.nodes[y]
             choices = self.choices[y]
             bitmasks = self.bitmasks[y]
+
+            print 'bitmask',bitmasks.shape
+            print 'nonzero',np.count_nonzero(bitmasks, axis=-1).shape
             maxlen = np.max(np.count_nonzero(bitmasks, axis=-1).flatten())
             nodes = nodes[:, :, :maxlen]
             choices = choices[:, :, :maxlen]
             bitmasks = bitmasks[:, :, :maxlen]
             return nodes, choices, bitmasks
 
-            print a,b,c
-            return a,b,c
 
         elif self.mode=='vector':
             # rotate the matrix could just solve the problems.
             nodes = self.nodes[y]
             choices = self.choices[y]
             bitmasks = self.bitmasks[y]
+            print 'bitmask',bitmasks.shape
+            print 'nonzero',np.count_nonzero(bitmasks, axis=-1)
             maxlen = np.max(np.count_nonzero(bitmasks, axis=-1).flatten())
             nodes = nodes[:, :, :maxlen].transpose((2, 0, 1))
             choices = choices[:, :, :maxlen].transpose((2, 0, 1))
@@ -61,6 +64,10 @@ class TextIterator(object):
 
     def __iter__(self):
         return self
+
+    def goto_line(self, line_index):
+        for _ in range(line_index):
+            self.source.readline()
 
     def reset(self):
         self.source.seek(0)
@@ -185,18 +192,19 @@ def load_brown_prefix(brown_path_file):
     texts=open(brown_path_file,'r')
     word_map=list()
     choice=list()
+    node=list()
     maxlen=0
     for line in texts:
         try:
             widx,bitstr,_=line.split()
             choice.append([1 if x == '1' else -1 for x in bitstr])
+            node.append([1 if x == '1' else -1 for x in bitstr[:-1]])
             word_map.append(int(widx))
             if len(bitstr)>=maxlen:
                 maxlen=len(bitstr)
-                print maxlen
         except ValueError:
             break
-    node=build_brown_node(copy.deepcopy(choice),maxlen)
+    node=build_brown_node(node,maxlen)
 
     length_x=[len(it) for it in choice]
     vocab_size=len(choice)
@@ -205,6 +213,7 @@ def load_brown_prefix(brown_path_file):
     bit_masks=np.zeros((vocab_size,maxlen),dtype='float32')
 
     for idx in word_map:
+        print len(node[idx]),len(choice[idx])
         nodes[idx,:length_x[idx]]=node[idx]
         choices[idx,:length_x[idx]]=choice[idx]
         bit_masks[idx,:length_x[idx]]=1
@@ -227,6 +236,7 @@ def build_brown_node(choice,maxlen):
             choice[row][col]=count
 
     node=[[0]+ch[:-1] for ch in choice]
+    print "node count",node.shape
     return node
 
 
@@ -240,13 +250,14 @@ if __name__=='__main__':
         print '-'*80
         print y_node.shape
         print '='*80
-    
+    '''
 
     train_data = TextIterator('../data/wikitext-2/idx_wiki.train.tokens', '../data/wikitext-2/wikitext-2_sorted.txt', n_words_source=-1,
                               n_batch=5,
                               brown_or_huffman='brown', mode='matrix')
     for x, x_mask, (y_node, y_choice, y_bit_mask), y_mask in train_data:
         print '-' * 80
-        print y_node
+        print x.shape
+        print y_node.shape
         print '=' * 80
-    '''
+
