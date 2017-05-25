@@ -2,6 +2,8 @@ import numpy as np
 np.set_printoptions(threshold=np.inf)
 import cPickle as pickle
 import Queue
+import copy
+from collections import defaultdict
 
 def save_model(f,model):
     ps={}
@@ -26,7 +28,6 @@ class TextIterator(object):
             print "Huffman clustering"
             self.nodes, self.choices, self.bitmasks = load_huffman_prefix(filepath)
 
-
         self.n_batch=n_batch
         self.maxlen=maxlen
         self.n_words_source=n_words_source
@@ -35,12 +36,28 @@ class TextIterator(object):
 
     def reconstruct(self,y):
         if self.mode=='matrix':
-            return self.nodes[y],self.choices[y],self.bitmasks[y]
+            nodes = self.nodes[y]
+            choices = self.choices[y]
+            bitmasks = self.bitmasks[y]
+            maxlen = np.max(np.count_nonzero(bitmasks, axis=-1).flatten())
+            nodes = nodes[:, :, :maxlen]
+            choices = choices[:, :, :maxlen]
+            bitmasks = bitmasks[:, :, :maxlen]
+            return nodes, choices, bitmasks
+
+            print a,b,c
+            return a,b,c
+
         elif self.mode=='vector':
             # rotate the matrix could just solve the problems.
-            return self.nodes[y].transpose((2,0,1)),\
-                   self.choices[y].transpose((2,0,1)),\
-                   self.bitmasks[y].transpose((2,0,1))
+            nodes = self.nodes[y]
+            choices = self.choices[y]
+            bitmasks = self.bitmasks[y]
+            maxlen = np.max(np.count_nonzero(bitmasks, axis=-1).flatten())
+            nodes = nodes[:, :, :maxlen].transpose((2, 0, 1))
+            choices = choices[:, :, :maxlen].transpose((2, 0, 1))
+            bitmasks = bitmasks[:, :, :maxlen].transpose((2, 0, 1))
+            return nodes, choices, bitmasks
 
     def __iter__(self):
         return self
@@ -60,7 +77,6 @@ class TextIterator(object):
                 if s=="":
                     raise IOError
                 s=s.strip().split(' ')
-
                 if self.n_words_source>0:
                     s=[int(w) if int(w) <self.n_words_source else 3 for w in s]
                 # filter long sentences
@@ -167,51 +183,50 @@ def load_huffman_prefix(freq_file):
 
 def load_brown_prefix(brown_path_file):
     texts=open(brown_path_file,'r')
-    prefix=list()
+    word_map=list()
     choice=list()
     maxlen=0
     for line in texts:
         try:
-            bitstr,widx,_=line.split()
-            prefix.append([1 if x=='1' else -1 for x in bitstr])
-            choice.append([1 if x=='1' else -1 for x in bitstr])
+            widx,bitstr,_=line.split()
+            choice.append([1 if x == '1' else -1 for x in bitstr])
+            word_map.append(int(widx))
             if len(bitstr)>=maxlen:
                 maxlen=len(bitstr)
+                print maxlen
         except ValueError:
             break
+    node=build_brown_node(copy.deepcopy(choice),maxlen)
 
-    node=build_brown_node(prefix,maxlen)
-
-    length_x=[len(it) for it in prefix]
-    vocab_size=len(prefix)
+    length_x=[len(it) for it in choice]
+    vocab_size=len(choice)
     nodes=np.zeros((vocab_size,maxlen),dtype='int32')
-    choices=np.zeros((vocab_size,maxlen),dtype='int32')
+    choices=np.zeros((vocab_size,maxlen),dtype='float32')
     bit_masks=np.zeros((vocab_size,maxlen),dtype='float32')
 
-    for idx in range(vocab_size):
+    for idx in word_map:
         nodes[idx,:length_x[idx]]=node[idx]
         choices[idx,:length_x[idx]]=choice[idx]
         bit_masks[idx,:length_x[idx]]=1
-    return nodes,choice,bit_masks
+    return nodes,choices,bit_masks
 
 
-def build_brown_node(local_choice,maxlen):
+def build_brown_node(choice,maxlen):
     count = 0
     for col in range(maxlen):
         pre=0
-        for row in range(len(local_choice)):
-            if len(local_choice[row])<=col:
+        for row in range(len(choice)):
+            if len(choice[row])<=col:
                 continue
             if pre==0:
-                pre=local_choice[row][col]+1
-
-            if local_choice[row][col]!=pre:
+                pre=choice[row][col]+1
+            if choice[row][col]!=pre:
                 count+=1
-                pre=local_choice[row][col]
+                pre=choice[row][col]
 
-            local_choice[row][col]=count
+            choice[row][col]=count
 
-    node=[[0]+ch[:-1] for ch in local_choice]
+    node=[[0]+ch[:-1] for ch in choice]
     return node
 
 
@@ -219,11 +234,19 @@ def build_brown_node(local_choice,maxlen):
 if __name__=='__main__':
     #load_brown_prefix('idx_wiki.train-c50-p1.out/paths')
     '''
-    train_data = TextIterator('../data/ptb/idx_ptb.train.txt', '../data/ptb/frequenties.pkl', n_words_source=-1, n_batch=5,
+    train_data = TextIterator('../data/wikitext-2/idx_wiki.train.tokens', '../data/wikitext-2/frequenties.pkl', n_words_source=-1, n_batch=5,
                               brown_or_huffman='huffman', mode='matrix')
     for x,x_mask,(y_node,y_choice,y_bit_mask),y_mask in train_data:
         print '-'*80
-        print y_node
+        print y_node.shape
         print '='*80
-        print y.transpose()
+    
+
+    train_data = TextIterator('../data/wikitext-2/idx_wiki.train.tokens', '../data/wikitext-2/wikitext-2_sorted.txt', n_words_source=-1,
+                              n_batch=5,
+                              brown_or_huffman='brown', mode='matrix')
+    for x, x_mask, (y_node, y_choice, y_bit_mask), y_mask in train_data:
+        print '-' * 80
+        print y_node
+        print '=' * 80
     '''
