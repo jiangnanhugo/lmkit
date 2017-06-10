@@ -2,7 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-class GRU:
+class GRU(object):
     def __init__(self,rng,
                  n_input,n_hidden,
                  x,E,mask,
