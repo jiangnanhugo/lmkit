@@ -1,7 +1,7 @@
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from h_softmax import H_Softmax
-from gru import GRU
+from layers.gru import GRU
+from layers.h_softmax import H_Softmax
 from lstm import LSTM
 from updates import *
 

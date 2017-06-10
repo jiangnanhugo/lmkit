@@ -1,11 +1,10 @@
-import time
 import os
-from rnnlm import *
-from utils import TextIterator,save_model,calculate_wer,load_model
-
-import logging
-from argparse import ArgumentParser 
 import sys
+import time
+from argparse import ArgumentParser
+
+from layers.utils import TextIterator,save_model, load_model
+from rnnlm import *
 
 lr=0.001
 p=0.1

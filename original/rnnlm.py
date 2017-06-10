@@ -4,9 +4,9 @@ if theano.config.device=='cpu':
 else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 from softmax import softmax
-from gru import GRU
-from lstm import LSTM
-from updates import * 
+from layers.gru import GRU
+from layers.lstm import LSTM
+from layers.updates import *
 
 class RNNLM(object): 
     def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5): 
