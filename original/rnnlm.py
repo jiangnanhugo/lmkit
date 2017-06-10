@@ -3,7 +3,7 @@ if theano.config.device=='cpu':
     from theano.tensor.shared_randomstreams import RandomStreams
 else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-from softmax import softmax
+from layers.softmax import softmax
 from layers.gru import GRU
 from layers.lstm import LSTM
 from layers.updates import *

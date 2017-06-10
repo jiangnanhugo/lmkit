@@ -4,14 +4,14 @@ import theano.tensor as T
 
 class LSTM:
     def __init__(self,rng,
-                 n_input,n_hidden,n_batch,
+                 n_input,n_hidden,
                  x,E,mask,
                  is_train=1,p=0.5):
         self.rng=rng
 
         self.n_input=n_input
         self.n_hidden=n_hidden
-        self.n_batch=n_batch
+
 
         self.x=x
         self.E=E
