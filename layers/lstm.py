@@ -2,7 +2,7 @@ import numpy as np
 import theano
 import theano.tensor as T
 
-class LSTM:
+class LSTM(object):
     def __init__(self,rng,
                  n_input,n_hidden,
                  x,E,mask,
@@ -103,18 +103,17 @@ class LSTM:
         [h,c],_=theano.scan(fn=_recurrence,
                             sequences=[self.x,self.mask],
                             truncate_gradient=-1,
-                            outputs_info=[dict(initial=T.zeros((self.n_batch,self.n_hidden))),
-                                          dict(initial=T.zeros((self.n_batch,self.n_hidden)))])
-        self.activation=h
-        '''
+                            outputs_info=[dict(initial=T.zeros((self.x.shape[-1],self.n_hidden))),
+                                          dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))])
+        #self.activation=h
+
         # Dropout
         if self.p>0:
             drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
-            self.activation=T.switch(T.eq(self.is_train,1),h*drop_mask,h*(1-self.p))
+            self.activation=T.switch(self.is_train,h*drop_mask,h*(1-self.p))
         else:
-            self.activation=T.switch(T.eq(self.is_train,1),h,h)
-        '''
+            self.activation=T.switch(self.is_train,h,h)
 
-        
-            
+
+
                     

@@ -90,6 +90,6 @@ class GRU(object):
         # Dropout
         if self.p>0:
             drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
-            self.activation=T.switch(T.eq(self.is_train,1),h*drop_mask,h*(1-self.p))
+            self.activation=T.switch(self.is_train,h*drop_mask,h*(1-self.p))
         else:
-            self.activation=T.switch(T.eq(self.is_train,1),h,h)
+            self.activation=T.switch(self.is_train,h,h)
