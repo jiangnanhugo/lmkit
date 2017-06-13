@@ -3,10 +3,13 @@ if theano.config.device=='cpu':
     from theano.tensor.shared_randomstreams import RandomStreams
 else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-from layers.softmax import softmax
-from layers.gru import GRU
-from layers.lstm import LSTM
-from layers.updates import *
+
+from lmkit.layers.softmax import softmax
+from lmkit.layers.gru import GRU
+from lmkit.layers.FastGRU import FastGRU
+from lmkit.layers.lstm import LSTM
+from lmkit.layers.FastLSTM import FastLSTM
+from lmkit.layers.updates import *
 
 class RNNLM(object): 
     def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5): 
@@ -33,16 +36,28 @@ class RNNLM(object):
 
     def build(self):
         print 'building rnn cell...'
+        hidden_layer=None
         if self.cell == 'gru':
             hidden_layer = GRU(self.rng,
                                self.n_input, self.n_hidden, 
                                self.x, self.E, self.x_mask,
                                self.is_train, self.p)
-        else:
+        elif self.cell == 'fastgru':
+            hidden_layer = FastGRU(self.rng,
+                               self.n_input, self.n_hidden,
+                               self.x, self.E, self.x_mask,
+                               self.is_train, self.p)
+        elif self.cell == 'lstm':
             hidden_layer = LSTM(self.rng,
                                 self.n_input, self.n_hidden, 
                                 self.x, self.E, self.x_mask,
                                 self.is_train, self.p)
+        elif self.cell == 'fastlstm':
+            hidden_layer = FastLSTM(self.rng,
+                                self.n_input, self.n_hidden,
+                                self.x, self.E, self.x_mask,
+                                self.is_train, self.p)
+
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
         cost= self.categorical_crossentropy(output_layer.activation, self.y) # nll

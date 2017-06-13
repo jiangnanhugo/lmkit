@@ -45,8 +45,6 @@ class FastLSTM(object):
 
     def build(self):
         def split(x,n,dim):
-            if x.ndim==3:
-                return x[:,:,n*dim:(n+1)*dim]
             return x[:,n*dim:(n+1)*dim]
 
         def __recurrence(x_t,m,h_tm1,c_tm1):
@@ -75,7 +73,7 @@ class FastLSTM(object):
                             outputs_info=[dict(initial=T.zeros((self.x.shape[-1],self.n_hidden))),
                                           dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))])
         if self.p>0:
-            drop_mask=self.rng.binormal(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
+            drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
             self.activation=T.switch(self.is_train,h*drop_mask,h*(1-self.p))
         else:
             self.activation=T.switch(self.is_train,h,h)

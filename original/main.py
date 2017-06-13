@@ -1,17 +1,18 @@
-import os
-import sys
 import time
-from argparse import ArgumentParser
-
-from layers.utils import TextIterator,save_model, load_model
+import os
 from rnnlm import *
+from lmkit.layers.utils import TextIterator,save_model,calculate_wer,load_model
+
+import logging
+from argparse import ArgumentParser
+import sys
 
 lr=0.001
 p=0.1
-NEPOCH=100
+NEPOCH=1
 n_input=256
 n_hidden=256
-cell='gru'
+
 
 argument = ArgumentParser(usage='it is usage tip', description='no')  
 argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', type=str, help='train dir')  
@@ -21,6 +22,7 @@ argument.add_argument('--model_dir', default='./model/parameters_176832.65.pkl',
 argument.add_argument('--goto_line', default=10, type=int, help='goto the specific line index')
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=10, type=int, help='batch size')
+argument.add_argument('--rnn_cell', default='fastlstm', type=str, help='lstm/gru/fastgru/fastlstm')
 argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
 argument.add_argument('--mode',default='train',type=str,help='train/valid/test')
 argument.add_argument('--maxlen',default=256,type=int,help='constrain the maxlen for training')
@@ -41,10 +43,11 @@ model_dir=args.model_dir
 goto_line=args.goto_line
 n_batch=args.batch_size
 vocabulary_size=args.vocab_size
+rnn_cell=args.rnn_cell
 optimizer= args.optimizer
 maxlen=args.maxlen
 n_words_source=-1
-disp_freq=5
+disp_freq=50
 valid_freq=args.valid_freq
 test_freq=args.test_freq
 save_freq=args.save_freq
@@ -68,7 +71,7 @@ def train(lr):
     valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
     test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
     print 'building model...'
-    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
     if os.path.isfile(model_dir):
         print 'loading checkpoint parameters....',model_dir
         model=load_model(model_dir,model)

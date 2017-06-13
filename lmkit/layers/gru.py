@@ -3,6 +3,9 @@ import theano
 import theano.tensor as T
 
 class GRU(object):
+    """
+    http://colah.github.io/posts/2015-08-Understanding-LSTMs/
+    """
     def __init__(self,rng,
                  n_input,n_hidden,
                  x,E,mask,
