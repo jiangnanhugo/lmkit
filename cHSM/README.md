@@ -1,0 +1,1 @@
+prepare to use brown clustering to initialize the class softmax layer. while the size of every class is not the same !

@@ -9,14 +9,14 @@ from lmkit.layers.gru import GRU
 from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.lstm import LSTM
 from lmkit.layers.FastLSTM import FastLSTM
-from lmkit.layers.updates import *
+from lmkit.updates import *
 
 class RNNLM(object): 
     def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5): 
         self.x = T.imatrix('batched_sequence_x')  # n_batch, maxlen 
-        self.x_mask = T.matrix('x_mask') 
+        self.x_mask = T.fmatrix('x_mask')
         self.y = T.imatrix('batched_sequence_y') 
-        self.y_mask = T.matrix('y_mask') 
+        self.y_mask = T.fmatrix('y_mask')
         self.n_input = n_input 
         self.n_hidden = n_hidden 
         self.n_output = n_output 

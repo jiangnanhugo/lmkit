@@ -1,7 +1,8 @@
 import time
 
 from rnnlm import *
-from utils import TextIterator,save_model,load_model
+from utils import TextIterator
+from lmkit.utils import save_model,load_model
 
 import logging
 from logging.config import fileConfig
@@ -51,7 +52,7 @@ model_dir=args.model_dir
 mode=args.mode
 reload_dumps=args.reload_dumps
 
-n_words_source=-1
+
 disp_freq=20
 valid_freq=1000
 test_freq=1000
@@ -71,16 +72,16 @@ def train(lr):
     # Load data
     logger.info('loading dataset...')
 
-    train_data=TextIterator(train_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    train_data=TextIterator(train_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
     logger.info('building model...')
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
     if os.path.exists(model_dir) and reload_dumps==1:
-        print 'loading parameters from:',model_dir
+        logger.info( 'loading parameters from: %s'% model_dir)
         model=load_model(model_dir,model)
     else:
-        print "init parameters...."
+        logger.info("init parameters....")
     logger.info( 'training start...')
     start=time.time()
     idx=0
@@ -117,8 +118,8 @@ def train(lr):
 
 
 def test():
-    valid_data=TextIterator(valid_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    test_data=TextIterator(test_datafile,filepath,n_words_source=n_words_source,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:',args.model_dir
@@ -132,7 +133,7 @@ def test():
 
 
 if __name__ == '__main__':
-        if args.mode=='train':
-            train(lr=lr)
-        elif args.mode=='testing':
-            test()
+    if args.mode=='train':
+        train(lr=lr)
+    elif args.mode=='testing':
+        test()

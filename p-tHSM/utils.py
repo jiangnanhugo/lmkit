@@ -18,7 +18,7 @@ def load_model(f,model):
     return model
 
 class TextIterator(object):
-    def __init__(self,source,filepath,n_batch,maxlen=None,n_words_source=-1,brown_or_huffman='huffman',mode='vector'):
+    def __init__(self,source,filepath,n_batch,maxlen=None,brown_or_huffman='huffman',mode='vector'):
 
         self.source=open(source,'r')
         if brown_or_huffman=='brown':
@@ -30,7 +30,6 @@ class TextIterator(object):
 
         self.n_batch=n_batch
         self.maxlen=maxlen
-        self.n_words_source=n_words_source
         self.end_of_data=False
         self.mode=mode
 
@@ -84,11 +83,11 @@ class TextIterator(object):
                 if s=="":
                     raise IOError
                 s=s.strip().split(' ')
-                if self.n_words_source>0:
-                    s=[int(w) if int(w) <self.n_words_source else 3 for w in s]
                 # filter long sentences
                 if self.maxlen and len(s)>self.maxlen:
                     continue
+                s=[int(w) for w in s]
+
                 source.append(s)
                 if len(source)>=self.n_batch:
                     break

@@ -1,9 +1,9 @@
 from theano.tensor.shared_randomstreams import RandomStreams
 
-from layers.gru import GRU
+from lmkit.layers.gru import GRU
 from layers.h_softmax import H_Softmax
-from lstm import LSTM
-from updates import *
+from lmkit.layers.FastLSTM import FastLSTM
+from lmkit.updates import *
 
 class RNNLM(object):
     def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5,mode='vector'):
@@ -36,13 +36,14 @@ class RNNLM(object):
 
     def build(self):
         print '\t building rnn cell...'
+        hidden_layer=None
         if self.cell=='gru':
             hidden_layer=GRU(self.rng,
                              self.n_input,self.n_hidden,self.n_batch,
                              self.x,self.E,self.x_mask,
                              self.is_train,self.p)
-        else:
-            hidden_layer=LSTM(self.rng,
+        elif self.cell  == 'fastlstm':
+            hidden_layer=FastLSTM(self.rng,
                               self.n_input,self.n_hidden,self.n_batch,
                               self.x,self.E,self.x_mask,
                               self.is_train,self.p)

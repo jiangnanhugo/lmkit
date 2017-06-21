@@ -1,0 +1,1 @@
+use the official `theano.tensor.nnet.h_softmax` to implement the equal size class softmax. every class contains similar frequency words.

@@ -1,7 +1,7 @@
 import time
 import os
 from rnnlm import *
-from lmkit.layers.utils import TextIterator,save_model,calculate_wer,load_model
+from lmkit.utils import TextIterator,save_model,calculate_wer,load_model
 
 import logging
 from argparse import ArgumentParser
@@ -46,7 +46,6 @@ vocabulary_size=args.vocab_size
 rnn_cell=args.rnn_cell
 optimizer= args.optimizer
 maxlen=args.maxlen
-n_words_source=-1
 disp_freq=50
 valid_freq=args.valid_freq
 test_freq=args.test_freq
@@ -67,9 +66,9 @@ def evaluate(test_data,model):
 
 def train(lr):
     print 'loading dataset...'
-    train_data=TextIterator(train_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
-    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
-    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch,maxlen=maxlen)
+    train_data=TextIterator(train_datafile,n_batch=n_batch,maxlen=maxlen)
+    valid_data=TextIterator(valid_datafile,n_batch=n_batch,maxlen=maxlen)
+    test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
     print 'building model...'
     model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
     if os.path.isfile(model_dir):
@@ -116,9 +115,9 @@ def train(lr):
     print "Finished. Time = "+str(time.time()-start)
 
 def test():
-    test_data=TextIterator(test_datafile,n_words_source=n_words_source,n_batch=n_batch)
-    valid_data=TextIterator(valid_datafile,n_words_source=n_words_source,n_batch=n_batch)
-    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p)
+    test_data=TextIterator(test_datafile,n_batch=n_batch)
+    valid_data=TextIterator(valid_datafile,n_batch=n_batch)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:',args.model_dir
         model=load_model(args.model_dir,model)
