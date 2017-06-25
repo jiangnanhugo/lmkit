@@ -2,10 +2,10 @@
 from setuptools import setup
 
 setup(name='lmkit',
-      version='0.11',
+      version='0.111',
       description='Python Distribution Utilities',
       author='nan jiang',
       author_email='jiangnan@gmail.com',
       url='github.com/jiangnanhugo/lmkit',
-      packages=['lmkit'],
+      packages=['lmkit','lmkit.layers'],
      )

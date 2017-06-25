@@ -28,7 +28,7 @@ class FastGRU(object):
                             dtype=theano.config.floatX)
         init_U = np.asarray(np.random.uniform(low=-np.sqrt(1. / n_input),
                                               high=np.sqrt(1. / n_input),
-                                              size=(n_hidden, n_hidden)),
+                                              size=(n_hidden, n_hidden*2)),
                             dtype=theano.config.floatX)
 
         init_b = np.zeros((n_hidden * 2), dtype=theano.config.floatX)
@@ -50,7 +50,7 @@ class FastGRU(object):
 
         self.Wx = theano.shared(value=init_Wx, name='Wx')
         self.Ux = theano.shared(value=init_Ux, name='Ux')
-        self.bx = theano.shared(value=init_bx, name='b')
+        self.bx = theano.shared(value=init_bx, name='bx')
 
         # Params
         self.params = [self.W, self.U, self.b, self.Wx, self.Ux, self.bx]
@@ -59,8 +59,8 @@ class FastGRU(object):
 
     def build(self):
         state_pre = T.zeros((self.x.shape[-1], self.n_hidden), dtype=theano.config.floatX)
-        state_below = T.dot(self.x, self.W) + self.b
-        state_belowx = T.dot(self.x, self.Wx) + self.bx
+        state_below = T.dot(self.E[self.x,:], self.W) + self.b
+        state_belowx = T.dot(self.E[self.x,:], self.Wx) + self.bx
 
         def split(x, n, dim):
             if x.ndim == 3:
@@ -68,7 +68,7 @@ class FastGRU(object):
             return x[:, n * dim:(n + 1) * dim]
 
         def _recurrence(x_t, xx_t, m, h_tm1):
-            preact = T.dot(h_tm1, self.U) + x_t
+            preact = x_t + T.dot(h_tm1, self.U)
 
             # reset fate
             r_t = self.f(split(preact, 0, self.n_hidden))

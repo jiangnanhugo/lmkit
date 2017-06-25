@@ -21,7 +21,3 @@ class softmax(object):
 
         self.activation=T.nnet.softmax(T.dot(self.x,self.W)+self.b)
         self.predict=T.argmax(self.activation,axis=-1)
-        
-
-        
-        
