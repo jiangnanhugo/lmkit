@@ -1,4 +1,7 @@
-# language_modeling
+# lmkit
+
+## accepted paper
+Exploration of Tree-based Hierarchical Softmax for Recurrent Language Models. IJCAI 2017.
 
 ## original
 
