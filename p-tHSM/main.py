@@ -1,6 +1,7 @@
 import time
 
-from rnnlm import *
+from rnnlm import RNNLM
+
 from utils import TextIterator
 from lmkit.utils import save_model,load_model
 
@@ -11,8 +12,8 @@ logger=logging.getLogger()
 from argparse import ArgumentParser
 import sys
 import os
-import numpy
-numpy.set_printoptions(threshold=numpy.nan)
+import numpy as np
+np.set_printoptions(threshold=np.nan)
 
 lr=0.001
 p=0.1
@@ -28,6 +29,7 @@ argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', t
 argument.add_argument('--model_dir',default='./model/parameters.pkl',type=str,help='trained model file as checkpoints')
 argument.add_argument('--reload_dumps',default=0,type=int,help='reload trained model')
 argument.add_argument('--filepath',default='../data/ptb/frequenties.pkl',type=str,help='word frequenties or brown prefix')
+argument.add_argument('--word2idx_path',default='../data/wikitext-2/word2idx.pkl',type=str,help='word to idx pickle')
 argument.add_argument('--valid_file', default='../data/ptb/idx_ptb.valid.txt', type=str, help='valid dir')
 argument.add_argument('--test_file', default='../data/ptb/idx_ptb.test.txt', type=str, help='test dir')
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
@@ -41,6 +43,7 @@ args = argument.parse_args()
 print args
 
 train_datafile=args.train_file
+word2idx_path=args.word2idx_path
 filepath=args.filepath
 valid_datafile=args.valid_file
 test_datafile=args.test_file
@@ -72,11 +75,11 @@ def train(lr):
     # Load data
     logger.info('loading dataset...')
 
-    train_data=TextIterator(train_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    train_data=TextIterator(train_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector,word2idx_path=word2idx_path)
+    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector,word2idx_path=word2idx_path)
+    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector,word2idx_path=word2idx_path)
     logger.info('building model...')
-    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p=p,mode=matrix_or_vector)
     if os.path.exists(model_dir) and reload_dumps==1:
         logger.info( 'loading parameters from: %s'% model_dir)
         model=load_model(model_dir,model)
@@ -118,8 +121,8 @@ def train(lr):
 
 
 def test():
-    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
-    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector)
+    valid_data=TextIterator(valid_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector,word2idx_path=word2idx_path)
+    test_data=TextIterator(test_datafile,filepath,n_batch=n_batch,brown_or_huffman=brown_or_huffman,mode=matrix_or_vector,word2idx_path=word2idx_path)
     model=RNNLM(n_input,n_hidden,vocabulary_size,cell,optimizer,p,mode=matrix_or_vector)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:',args.model_dir

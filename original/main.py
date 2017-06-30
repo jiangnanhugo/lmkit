@@ -29,6 +29,7 @@ argument.add_argument('--maxlen',default=256,type=int,help='constrain the maxlen
 argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
 argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
 argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
+argument.add_argument('--bptt',default=-1,type=int,help='truncated bptt')
 
 
 
@@ -45,6 +46,7 @@ n_batch=args.batch_size
 vocabulary_size=args.vocab_size
 rnn_cell=args.rnn_cell
 optimizer= args.optimizer
+bptt=args.bptt
 maxlen=args.maxlen
 disp_freq=50
 valid_freq=args.valid_freq
@@ -70,7 +72,7 @@ def train(lr):
     valid_data=TextIterator(valid_datafile,n_batch=n_batch,maxlen=maxlen)
     test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
     print 'building model...'
-    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p,bptt)
     if os.path.isfile(model_dir):
         print 'loading checkpoint parameters....',model_dir
         model=load_model(model_dir,model)

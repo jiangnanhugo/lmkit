@@ -12,7 +12,7 @@ from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.updates import *
 
 class RNNLM(object): 
-    def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5): 
+    def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5,bptt=-1):
         self.x = T.imatrix('batched_sequence_x')  # n_batch, maxlen 
         self.x_mask = T.fmatrix('x_mask')
         self.y = T.imatrix('batched_sequence_y') 
@@ -27,6 +27,7 @@ class RNNLM(object):
         self.cell = cell 
         self.optimizer = optimizer 
         self.p = p
+        self.bptt=bptt
 
         
         self.is_train = T.iscalar('is_train')
@@ -41,22 +42,22 @@ class RNNLM(object):
             hidden_layer = GRU(self.rng,
                                self.n_input, self.n_hidden, 
                                self.x, self.E, self.x_mask,
-                               self.is_train, self.p)
+                               self.is_train, self.p,self.bptt)
         elif self.cell == 'fastgru':
             hidden_layer = FastGRU(self.rng,
                                self.n_input, self.n_hidden,
                                self.x, self.E, self.x_mask,
-                               self.is_train, self.p)
+                               self.is_train, self.p,self.bptt)
         elif self.cell == 'lstm':
             hidden_layer = LSTM(self.rng,
                                 self.n_input, self.n_hidden, 
                                 self.x, self.E, self.x_mask,
-                                self.is_train, self.p)
+                                self.is_train, self.p,self.bptt)
         elif self.cell == 'fastlstm':
             hidden_layer = FastLSTM(self.rng,
                                 self.n_input, self.n_hidden,
                                 self.x, self.E, self.x_mask,
-                                self.is_train, self.p)
+                                self.is_train, self.p,self.bptt)
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)

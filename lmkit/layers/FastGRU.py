@@ -7,7 +7,7 @@ class FastGRU(object):
     def __init__(self, rng,
                  n_input, n_hidden,
                  x, E, mask,
-                 is_train=1, p=0.5):
+                 is_train=1, p=0.5,bptt=-1):
         # https://github.com/nyu-dl/dl4mt-tutorial/tree/master/session3
         self.rng = rng
 
@@ -20,6 +20,7 @@ class FastGRU(object):
         self.mask = mask
         self.is_train = is_train
         self.p = p
+        self.bptt=bptt
 
         # Update gate
         init_W = np.asarray(np.random.uniform(low=-np.sqrt(1. / n_input),
@@ -89,7 +90,7 @@ class FastGRU(object):
         h, _ = theano.scan(fn=_recurrence,
                            sequences=[state_below, state_belowx, self.mask],
                            outputs_info=state_pre,
-                           truncate_gradient=-1)
+                           truncate_gradient=self.bptt)
 
         # Dropout
         if self.p > 0:

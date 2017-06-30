@@ -2,28 +2,15 @@ import numpy as np
 np.set_printoptions(threshold=np.inf)
 import cPickle as pickle
 import Queue
-import copy
-from collections import defaultdict
 
-def save_model(f,model):
-    ps={}
-    for p in model.params:
-        ps[p.name]=p.get_value()
-    pickle.dump(ps,open(f,'wb'))
-
-def load_model(f,model):
-    ps=pickle.load(open(f,'rb'))
-    for p in model.params:
-        p.set_value(ps[p.name])
-    return model
 
 class TextIterator(object):
-    def __init__(self,source,filepath,n_batch,maxlen=None,brown_or_huffman='huffman',mode='vector'):
+    def __init__(self,source,filepath,n_batch,maxlen=None,brown_or_huffman='huffman',mode='vector',word2idx_path=None):
 
         self.source=open(source,'r')
         if brown_or_huffman=='brown':
             print "Brown clusteing"
-            self.nodes,self.choices,self.bitmasks=load_brown_prefix(filepath)
+            self.nodes,self.choices,self.bitmasks=load_brown_prefix(filepath,word2idx_path)
         elif brown_or_huffman=='huffman':
             print "Huffman clustering"
             self.nodes, self.choices, self.bitmasks = load_huffman_prefix(filepath)
@@ -39,8 +26,8 @@ class TextIterator(object):
             choices = self.choices[y]
             bitmasks = self.bitmasks[y]
 
-            print 'bitmask',bitmasks.shape
-            print 'nonzero',np.count_nonzero(bitmasks, axis=-1).shape
+            #print 'bitmask',bitmasks.shape
+            #print 'nonzero',np.count_nonzero(bitmasks, axis=-1).shape
             maxlen = np.max(np.count_nonzero(bitmasks, axis=-1).flatten())
             nodes = nodes[:, :, :maxlen]
             choices = choices[:, :, :maxlen]
@@ -187,55 +174,69 @@ def load_huffman_prefix(freq_file):
     return nodes,choices,bit_masks
 
 
-def load_brown_prefix(brown_path_file):
-    texts=open(brown_path_file,'r')
+def load_brown_prefix(cluster_path,word2idx_path):
+    texts=open(cluster_path,'r')
+    word2idx=pickle.load(open(word2idx_path,'r'))
+
     word_map=list()
     choice=list()
-    node=list()
+    prefix=list()
     maxlen=0
     for line in texts:
-        try:
-            widx,bitstr,_=line.split()
-            choice.append([1 if x == '1' else -1 for x in bitstr])
-            node.append([1 if x == '1' else -1 for x in bitstr[:-1]])
-            word_map.append(int(widx))
-            if len(bitstr)>=maxlen:
-                maxlen=len(bitstr)
-        except ValueError:
-            break
-    node=build_brown_node(node,maxlen)
+        bitstr,word,_=line.split()
+        choice.append([1 if x == '1' else -1 for x in bitstr])
+        prefix.append([1 if x == '1' else -1 for x in bitstr])
+        word_map.append(int(word2idx[word]))
+        if len(bitstr)>=maxlen:
+            maxlen=len(bitstr)
 
-    length_x=[len(it) for it in choice]
-    vocab_size=len(choice)
+    print len(prefix)
+    node=build_brown_node(prefix,maxlen)
+
+    length_x=[len(it) for it in prefix]
+    vocab_size=len(prefix)
     nodes=np.zeros((vocab_size,maxlen),dtype='int32')
     choices=np.zeros((vocab_size,maxlen),dtype='float32')
     bit_masks=np.zeros((vocab_size,maxlen),dtype='float32')
 
+
+
+
+
     for idx in word_map:
-        print len(node[idx]),len(choice[idx])
         nodes[idx,:length_x[idx]]=node[idx]
         choices[idx,:length_x[idx]]=choice[idx]
-        bit_masks[idx,:length_x[idx]]=1
+        bit_masks[idx,:length_x[idx]]=1.
     return nodes,choices,bit_masks
 
 
-def build_brown_node(choice,maxlen):
+def build_brown_node(local_choice,maxlen):
     count = 0
+
     for col in range(maxlen):
         pre=0
-        for row in range(len(choice)):
-            if len(choice[row])<=col:
+        for row in range(len(local_choice)):
+            if len(local_choice[row])<col+1:
                 continue
+            elif len(local_choice[row])==col+1:
+                pre=local_choice[row][col]
+                continue
+
             if pre==0:
-                pre=choice[row][col]+1
-            if choice[row][col]!=pre:
+                pre=local_choice[row][col]+1
+
+            if local_choice[row][col]!=pre:
                 count+=1
-                pre=choice[row][col]
+                pre=local_choice[row][col]
 
-            choice[row][col]=count
+            local_choice[row][col]=count
 
-    node=[[0]+ch[:-1] for ch in choice]
-    print "node count",node.shape
+
+
+    node=[[0]+ch[:-1] for ch in local_choice]
+
+
+
     return node
 
 
@@ -251,12 +252,13 @@ if __name__=='__main__':
         print '='*80
     '''
 
-    train_data = TextIterator('../data/wikitext-2/idx_wiki.train.tokens', '../data/wikitext-2/wikitext-2_sorted.txt', n_words_source=-1,
+    train_data = TextIterator('../data/wikitext-2/idx_wiki.train.tokens', '../data/wikitext-2/wiki.train-c33277-p1.out/path',
                               n_batch=5,
-                              brown_or_huffman='brown', mode='matrix')
+                              brown_or_huffman='brown', mode='matrix',word2idx_path='../data/wikitext-2/word2idx.pkl')
     for x, x_mask, (y_node, y_choice, y_bit_mask), y_mask in train_data:
-        print '-' * 80
-        print x.shape
-        print y_node.shape
-        print '=' * 80
+        pass
+        #print '-' * 80
+        #print x.shape
+        #print y_node.shape
+        #print '=' * 80
 

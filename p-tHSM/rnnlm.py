@@ -1,7 +1,7 @@
 from theano.tensor.shared_randomstreams import RandomStreams
 
 from lmkit.layers.gru import GRU
-from layers.h_softmax import H_Softmax
+from lmkit.layers.h_softmax import H_Softmax
 from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.updates import *
 
@@ -21,14 +21,13 @@ class RNNLM(object):
                                                high=np.sqrt(1./n_output),
                                                size=(n_output,n_input)),
                            dtype=theano.config.floatX)
-        self.E=theano.shared(value=init_Embd,name='word_embedding')
+        self.E=theano.shared(value=init_Embd,name='word_embedding',borrow=True)
 
         self.cell=cell
         self.optimizer=optimizer
         self.p=p
         self.mode=mode
         self.is_train=T.iscalar('is_train')
-        self.n_batch=T.iscalar('n_batch')
 
         self.epsilon=1.0e-15
         self.rng=RandomStreams(1234)
@@ -39,12 +38,12 @@ class RNNLM(object):
         hidden_layer=None
         if self.cell=='gru':
             hidden_layer=GRU(self.rng,
-                             self.n_input,self.n_hidden,self.n_batch,
+                             self.n_input,self.n_hidden,
                              self.x,self.E,self.x_mask,
                              self.is_train,self.p)
         elif self.cell  == 'fastlstm':
             hidden_layer=FastLSTM(self.rng,
-                              self.n_input,self.n_hidden,self.n_batch,
+                              self.n_input,self.n_hidden,
                               self.x,self.E,self.x_mask,
                               self.is_train,self.p)
         print '\t building softmax output layer...'
@@ -61,12 +60,12 @@ class RNNLM(object):
         gparams=[T.clip(T.grad(cost,p),-10,10) for p in self.params]
         updates=sgd(self.params,gparams,lr)
 
-        self.train=theano.function(inputs=[self.x,self.x_mask,self.y_node,self.y_choice,self.y_bit_mask,self.y_mask,self.n_batch,lr],
+        self.train=theano.function(inputs=[self.x,self.x_mask,self.y_node,self.y_choice,self.y_bit_mask,self.y_mask,lr],
                                    outputs=cost,
                                    updates=updates,
                                    givens={self.is_train:np.cast['int32'](1)})
 
-        self.test=theano.function(inputs=[self.x,self.x_mask,self.y_node,self.y_choice,self.y_bit_mask,self.y_mask,self.n_batch],
+        self.test=theano.function(inputs=[self.x,self.x_mask,self.y_node,self.y_choice,self.y_bit_mask,self.y_mask],
                                    outputs=cost,
                                    givens={self.is_train:np.cast['int32'](0)})
         '''

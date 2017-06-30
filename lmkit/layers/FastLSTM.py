@@ -9,7 +9,7 @@ class FastLSTM(object):
     """
 
     def __init__(self,rng,n_input,n_hidden,
-                 x,E,mask,is_train=1,p=0.5):
+                 x,E,mask,is_train=1,p=0.5,bptt=-1):
         self.rng=rng
 
         self.n_input=n_input
@@ -21,6 +21,7 @@ class FastLSTM(object):
         self.is_train=is_train
         self.p=p
         self.f=T.nnet.sigmoid
+        self.bptt=bptt
 
         init_W=np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
                                              high=np.sqrt(1./n_input),
@@ -71,7 +72,8 @@ class FastLSTM(object):
         [h,c],_=theano.scan(fn=__recurrence,
                             sequences=[pre,self.mask],
                             outputs_info=[dict(initial=T.zeros((self.x.shape[-1],self.n_hidden))),
-                                          dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))])
+                                          dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))],
+                            truncate_gradient=self.bptt)
         if self.p>0:
             drop_mask=self.rng.binomial(n=1,p=1-self.p,size=h.shape,dtype=theano.config.floatX)
             self.activation=T.switch(self.is_train,h*drop_mask,h*(1-self.p))

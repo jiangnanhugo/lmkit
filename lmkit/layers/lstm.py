@@ -6,7 +6,7 @@ class LSTM(object):
     def __init__(self,rng,
                  n_input,n_hidden,
                  x,E,mask,
-                 is_train=1,p=0.5):
+                 is_train=1,p=0.5,bptt=-1):
         self.rng=rng
 
         self.n_input=n_input
@@ -18,6 +18,7 @@ class LSTM(object):
         self.mask=mask
         self.is_train=is_train
         self.p=p
+        self.bptt=bptt
 
         self.f=T.nnet.sigmoid
 
@@ -102,9 +103,9 @@ class LSTM(object):
 
         [h,c],_=theano.scan(fn=_recurrence,
                             sequences=[self.x,self.mask],
-                            truncate_gradient=-1,
                             outputs_info=[dict(initial=T.zeros((self.x.shape[-1],self.n_hidden))),
-                                          dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))])
+                                          dict(initial=T.zeros((self.x.shape[-1],self.n_hidden)))],
+                            truncate_gradient=self.bptt)
         #self.activation=h
 
         # Dropout
