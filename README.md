@@ -26,12 +26,4 @@ Exploration of Tree-based Hierarchical Softmax for Recurrent Language Models. IJ
 
 
 
-## rnn benchmark
 
-LSTM: 1102s
-
-FastLSTM:392s
-
-GRU:943s
-
-FastGRU:391s
