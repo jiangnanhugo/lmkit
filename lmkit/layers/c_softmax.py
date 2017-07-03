@@ -57,13 +57,14 @@ class C_softmax(object):
         self.build_graph()
 
     def build_graph(self):
-        """
+
+        '''
         self.x: [maxlen* batch_size, hidden_size]
         cp_matrix: hidden_size, class_size
         cbias: class_size
         T.dot(self.x,self.cp_matrix): [maxlen* batch_size, class_size]
         log_class_probs: [maxlen* batch_size, class_size]
-        """
+        '''
         log_class_probs=T.nnet.logsoftmax(T.dot(self.x,self.cp_matrix)+self.cb)
 
 
@@ -78,27 +79,36 @@ class C_softmax(object):
         wbias=self.wb[self.y_node[0],:]
 
         """
-        self.x: [maxlen*batch_size, hidden_size]
+        self.x.dimshuffle(0,'x',1): [maxlen*batch_size,1, hidden_size]
         wps: [batch_size*maxlen,max_word_dim,hidden_size]
         node: [maxlen*batch_size,max_word_dim]
         """
         node=T.sum(wps* self.x.dimshuffle(0,'x',1) ,axis=-1)+wbias
 
         """
-        log_word_probs: [maxlen* batch_size, max_word_dim], normalized probability for words inside each class.
+        mask: [maxlen* batch_size, max_word_dim]
         """
         m=self.y_node_mask[self.y_node[0],:,:]
-
-        log_word_probs=log_softmax_masked(node,m)
+        """
+        log_word_probs: [maxlen* batch_size, max_word_dim], normalized probability for words inside each class.
+        """
+        #log_word_probs=log_softmax_masked(node,m)
+        log_word_probs = T.nnet.logsoftmax(node* m)
 
 
         # word_log_softmax  +  class_log_softmax
-        logprobs=log_word_probs.take(self.y_node[1])+log_class_probs.take(self.y_node[0])
+        logprobs=log_class_probs.take(self.y_node[0])+log_word_probs.take(self.y_node[1])
 
         # [maxlen* batch_size, 1]
         # last dimension denotes the log probability of this word.
         self.predicted=log_softmax_masked(node,m)
         self.activation=logprobs*self.maskY
+        #self.logprobs=logprobs
+
+        # temp
+        #temp=T.nnet.softmax(T.dot(self.x,self.cp_matrix)+self.cb)
+        #self.log_class_probs=-T.nnet.categorical_crossentropy(temp,self.y_node[0])
+        #self.log_class_probs2=log_class_probs.take(self.y_node[0])
 
 
 

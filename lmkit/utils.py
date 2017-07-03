@@ -2,8 +2,13 @@ import numpy as np
 import cPickle as pickle
 import os
 
+
 def save_model(f,model):
-    os.makedirs(os.path.dirname(f),exist_ok=True)
+    output_folder=os.path.dirname(f)
+    try:
+        os.makedirs(output_folder)
+    except Exception:
+        pass
     ps={}
     for p in model.params:
         ps[p.name]=p.get_value()

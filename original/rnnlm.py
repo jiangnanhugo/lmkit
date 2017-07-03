@@ -9,7 +9,9 @@ from lmkit.layers.gru import GRU
 from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.lstm import LSTM
 from lmkit.layers.FastLSTM import FastLSTM
+from rnnblock import RnnBlock
 from lmkit.updates import *
+
 
 class RNNLM(object): 
     def __init__(self, n_input, n_hidden, n_output, cell='gru', optimizer='sgd', p=0.5,bptt=-1):
@@ -58,6 +60,9 @@ class RNNLM(object):
                                 self.n_input, self.n_hidden,
                                 self.x, self.E, self.x_mask,
                                 self.is_train, self.p,self.bptt)
+        elif self.cell == 'rnnblock':
+            hidden_layer=RnnBlock(self.rng,
+                                  self.n_hidden,self.x,self.E,self.x_mask,self.is_train,self.p)
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
@@ -69,7 +74,7 @@ class RNNLM(object):
 
         lr = T.scalar("lr")
         gparams = [T.clip(T.grad(cost, p), -10, 10) for p in self.params]
-
+        updates=None
         if self.optimizer =='sgd':
             updates = sgd(self.params, gparams, lr)
         elif self.optimizer == 'adam':

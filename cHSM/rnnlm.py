@@ -71,7 +71,7 @@ class RNNLM(object):
         output_layer = C_softmax(softmax_shape,
                                  hidden_layer.activation,
                                  self.y_node, self.y_node_mask, self.y_mask,self.node_maxlen)
-        cost = T.sum(output_layer.activation)
+        cost = -T.mean(output_layer.activation)
 
         self.params = [self.E, ]
         self.params += hidden_layer.params
@@ -88,7 +88,7 @@ class RNNLM(object):
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
         self.train = theano.function(inputs=[self.x, self.x_mask, self.y_node, self.y_mask, lr],
-                                     outputs=[cost,output_layer.predicted    ],
+                                     outputs=cost,
                                      updates=updates,
                                      givens={self.is_train: np.cast['int32'](1)})
         '''

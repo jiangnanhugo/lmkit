@@ -35,7 +35,7 @@ argument.add_argument('--prefix_path', default='prefix.pkl', type=str,
 
 
 argument.add_argument('--vocab_size', default=33287, type=int, help='vocab size')
-argument.add_argument('--batch_size', default=5, type=int, help='batch size')
+argument.add_argument('--batch_size', default=20, type=int, help='batch size')
 argument.add_argument('--rnn_cell', default='gru', type=str, help='recurrent unit type')
 argument.add_argument("--save_freq", default=0xffffffff, type=int, help="save frequency")
 argument.add_argument('--mode', default='train', type=str, help='train/valid/test')
@@ -94,14 +94,17 @@ def train(lr):
         error = 0
         for x, x_mask, y_node, y_mask in train_data:
             idx += 1
-            print x.shape
-            print x_mask.shape
-            print y_node.shape
-            print y_mask.shape
-            cost,outputlayer = model.train(x, x_mask, y_node, y_mask, lr)
-            print cost
-            print outputlayer.shape
-            print outputlayer
+            cost= model.train(x, x_mask, y_node, y_mask, lr)
+
+            #print classprob.reshape(x.shape)
+            #for x,y in zip(classprob,wordprob):
+            #    print x,y,np.abs(x-y)<1e-5
+
+            #print '-'*80
+            #print wordprob.reshape(x.shape)
+            #print '-'*79
+            #print y_node[0].reshape(x.shape)
+            #print '=' * 80
             error += cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
