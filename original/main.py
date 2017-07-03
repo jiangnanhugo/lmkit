@@ -10,14 +10,14 @@ import sys
 lr=0.001
 p=0.1
 NEPOCH=1
-n_input=256
-n_hidden=256
+n_input=256   # embedding of input word
+n_hidden=256  # hidden state layer size
 
 
 argument = ArgumentParser(usage='it is usage tip', description='no')  
-argument.add_argument('--train_file', default='../data/ptb/idx_ptb.train.txt', type=str, help='train dir')  
-argument.add_argument('--valid_file', default='../data/ptb/idx_ptb.valid.txt', type=str, help='valid dir')
-argument.add_argument('--test_file', default='../data/ptb/idx_ptb.test.txt', type=str, help='test dir')
+argument.add_argument('--train_file', default='../data/wikitext-2/idx_wiki.train.tokens', type=str, help='train dir')
+argument.add_argument('--valid_file', default='../data/wikitext-2/idx_wiki.valid.tokens', type=str, help='valid dir')
+argument.add_argument('--test_file', default='../data/wikitext-2/idx_wiki.test.tokens', type=str, help='test dir')
 argument.add_argument('--model_dir', default='./model/parameters_176832.65.pkl', type=str, help='model dir to dump')
 argument.add_argument('--goto_line', default=10, type=int, help='goto the specific line index')
 argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
@@ -62,7 +62,7 @@ def evaluate(test_data,model):
         nll=model.test(x,x_mask,y,y_mask)
         #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
         sumed_cost+=nll
-        idx+=np.sum(y_mask)
+        idx+=1#np.sum(y_mask)
         #n_words.append(np.sum(y_mask))
     return sumed_cost/(1.0*idx)#,np.sum(sumed_wer)/np.sum(n_words)
 
@@ -76,7 +76,7 @@ def train(lr):
     if os.path.isfile(model_dir):
         print 'loading checkpoint parameters....',model_dir
         model=load_model(model_dir,model)
-    if goto_line!=0:
+    if goto_line>0:
         train_data.goto_line(goto_line)
         print 'goto line:',goto_line
     print 'training start...'

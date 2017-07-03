@@ -4,7 +4,7 @@ from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.layers.gru import GRU
 from lmkit.layers.lstm import LSTM
 from lmkit.updates import *
-from c_softmax import C_softmax
+from lmkit.layers.c_softmax import C_softmax
 import cPickle as pickle
 
 if theano.config.device == 'cpu':
