@@ -93,3 +93,5 @@ def negative_sample(pos_y,k,J,q):
 
     #print neg_m
     return np.asarray(neg_m,dtype=np.int32)
+
+

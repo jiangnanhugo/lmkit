@@ -27,6 +27,7 @@ argument.add_argument('--vocab_freq_file', default='../data/wikitext-2/vocab_fre
 argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
 argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
 argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
+argument.add_argument('--bptt',default=-1,type=int,help='truncated bptt')
 
 args = argument.parse_args()
 
@@ -71,9 +72,9 @@ def train(lr):
 
     # Load data
     print 'loading dataset...'
-    train_data=TextIterator(train_datafile,maxlen=maxlen)
-    valid_data = TextIterator(valid_datafile,maxlen=maxlen)
-    test_data=TextIterator(test_datafile,maxlen=maxlen)
+    train_data=TextIterator(train_datafile,n_batch=n_batch,maxlen=maxlen)
+    valid_data = TextIterator(valid_datafile,n_batch=n_batch,maxlen=maxlen)
+    test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
 
     print 'building model...'
     model=GRULM(n_hidden,vocabulary_size,vocab_p,k,optimizer=optimizer)
@@ -82,7 +83,7 @@ def train(lr):
     for epoch in xrange(NEPOCH):
         error=0
         idx=0
-        for (x,y) in train_data:
+        for x,x_mask,y,y_mask in train_data:
             idx+=1
             negy=negative_sample(y,k,J,q)
             cost=model.train(x, y, negy,lr)

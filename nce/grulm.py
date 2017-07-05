@@ -1,123 +1,105 @@
 import numpy as np
 import theano as theano
 import theano.tensor as T
+from lmkit.layers.softmax import softmax
+from lmkit.layers.gru import GRU
+from lmkit.layers.FastGRU import FastGRU
+from lmkit.layers.lstm import LSTM
+from lmkit.layers.FastLSTM import FastLSTM
+from rnnblock import RnnBlock
 from lmkit.updates import *
+from nce import NCE
+
+if theano.config.device=='cpu':
+    from theano.tensor.shared_randomstreams import RandomStreams
+else:
+    from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 class GRULM:
-    def __init__(self,hidden_dim, word_dim,q_w, bptt_truncate=-1,k=10,optimizer='sgd'):
-        # Assign instance variables
-        self.word_dim = word_dim
-        self.hidden_dim = hidden_dim
-        self.bptt_truncate = bptt_truncate
+    def __init__(self,n_input, n_hidden, n_output,
+                 cell='gru', optimizer='sgd',p=0.1,
+                 q_w=None,k=10):
+        self.x = T.imatrix('batched_sequence_x')  # n_batch, maxlen
+        self.x_mask = T.fmatrix('x_mask')
+        self.y = T.imatrix('batched_sequence_y')
+        self.y_mask = T.fmatrix('y_mask')
+        # negy is the negative sampling for nce shape (len(y),k)
+        self.negy = T.itensor3('negy')
+
+        self.n_input=n_input
+        self.n_hidden=n_hidden
+        self.n_output=n_output
+
         self.k=k
         self.optimizer=optimizer
-        # Initialize the network parameters
-        init_E = np.random.uniform(-np.sqrt(1./word_dim), np.sqrt(1./word_dim), (hidden_dim, word_dim))
-        self.E = theano.shared(value=init_E.astype(theano.config.floatX),name='E')
-        init_U = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (3, hidden_dim, hidden_dim))
-        self.U = theano.shared(value=init_U.astype(theano.config.floatX),name='U')
-        init_W = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (3, hidden_dim, hidden_dim))
-        self.W = theano.shared(value=init_W.astype(theano.config.floatX),name='W')
-        init_V = np.random.uniform(-np.sqrt(1./hidden_dim), np.sqrt(1./hidden_dim), (word_dim, hidden_dim))
-        self.V = theano.shared(value=init_V.astype(theano.config.floatX),name='V')
-        init_b = np.zeros((3, hidden_dim))
-        self.b = theano.shared(value=init_b.astype(theano.config.floatX),name='b')
-        init_c = np.zeros(word_dim)
+        self.cell=cell
+        self.optimizer=optimizer
+        self.p=p
 
-        self.c = theano.shared(value=init_c.astype(theano.config.floatX),name='c')
+
+        init_Embd = np.asarray(
+            np.random.uniform(low=-np.sqrt(1. / n_output), high=np.sqrt(1. / n_output), size=(n_output, n_input)),
+            dtype=theano.config.floatX)
+
+        self.E = theano.shared(value=init_Embd, name='word_embedding', borrow=True)
+
+
 
         self.q_w = theano.shared(value=q_w, name='vocabulary distribution', borrow=True)
 
-        self.params=[self.E,self.U,self.W,self.V,self.b,self.c]
+        self.is_train = T.iscalar('is_train')
+        self.rng = RandomStreams(1234)
         self.build()
     
     def build(self):
-        E, V, U, W, b, c = self.E, self.V, self.U, self.W, self.b, self.c
-        
-        x = T.ivector('x')
-        y = T.ivector('y')
+        print 'building rnn cell...'
+        hidden_layer = None
+        if self.cell == 'gru':
+            hidden_layer = GRU(self.rng,
+                               self.n_input, self.n_hidden,
+                               self.x, self.E, self.x_mask,
+                               self.is_train, self.p, self.bptt)
+        elif self.cell == 'fastgru':
+            hidden_layer = FastGRU(self.rng,
+                                   self.n_input, self.n_hidden,
+                                   self.x, self.E, self.x_mask,
+                                   self.is_train, self.p, self.bptt)
+        elif self.cell == 'lstm':
+            hidden_layer = LSTM(self.rng,
+                                self.n_input, self.n_hidden,
+                                self.x, self.E, self.x_mask,
+                                self.is_train, self.p, self.bptt)
+        elif self.cell == 'fastlstm':
+            hidden_layer = FastLSTM(self.rng,
+                                    self.n_input, self.n_hidden,
+                                    self.x, self.E, self.x_mask,
+                                    self.is_train, self.p, self.bptt)
+        elif self.cell == 'rnnblock':
+            hidden_layer = RnnBlock(self.rng,
+                                    self.n_hidden, self.x, self.E, self.x_mask, self.is_train, self.p)
 
-        # negy is the negative sampling for nce
-        # shape (len(y),k)
-        negy = T.lmatrix('negy')
+        print 'building softmax output layer...'
+        output_layer = NCE(self.n_hidden, self.n_output,
+                           hidden_layer.activation,self.y,self.y_mask,self.negy,
+                           q_w=self.q_w,k=self.k)
 
-
-        def test_step(x_t,s_t1_prev):
-            # Word embedding layer
-            # E hidden word_dim/vocab_dim
-            x_e = E[:, x_t]
-
-            # GRU Layer
-            z_t = T.nnet.sigmoid(U[0].dot(x_e) + W[0].dot(s_t1_prev) + b[0])
-            r_t = T.nnet.sigmoid(U[1].dot(x_e) + W[1].dot(s_t1_prev) + b[1])
-            c_t = T.tanh(U[2].dot(x_e) + W[2].dot(s_t1_prev * r_t) + b[2])
-            s_t = (T.ones_like(z_t) - z_t) * c_t + z_t * s_t1_prev
-
-            # Final output calculation
-            # Theano's softmax returns a matrix with one row, we only need the row
-
-            # probability of output o_t
-            o_t = T.nnet.softmax(V.dot(s_t) + c)[0]
-
-            return [o_t, s_t]
-        
-        def train_step(x_t, y_t, neg_y_t, s_t1_prev, q_w):
-
-            # Word embedding layer
-            # E hidden word_dim/vocab_dim
-            x_e = E[:,x_t]
-            
-            # GRU Layer
-            z_t = T.nnet.sigmoid(U[0].dot(x_e) + W[0].dot(s_t1_prev) + b[0])
-            r_t = T.nnet.sigmoid(U[1].dot(x_e) + W[1].dot(s_t1_prev) + b[1])
-            c_t = T.tanh(U[2].dot(x_e) + W[2].dot(s_t1_prev * r_t) + b[2])
-            s_t = (T.ones_like(z_t) - z_t) * c_t + z_t * s_t1_prev
-            
-            
-            # Final output calculation
-            # Theano's softmax returns a matrix with one row, we only need the row
+        cost = output_layer.activation
+        predicted=output_layer.predict
 
 
-            # probability of output o_t
-            # o_t = T.nnet.softmax(V.dot(s_t) + c)[0]
+        self.params = [self.E, ]
+        self.params += hidden_layer.params
+        self.params += output_layer.params
 
-            # noise contrastive estimation version output probability
+        lr = T.scalar("lr")
+        gparams = [T.clip(T.grad(cost, p), -10, 10) for p in self.params]
+        updates = None
+        if self.optimizer == 'sgd':
+            updates = sgd(self.params, gparams, lr)
+        elif self.optimizer == 'adam':
+            updates = adam(self.params, gparams, lr)
+        elif self.optimizer == 'rmsprop':
+            updates = rmsprop(params=self.params, grads=gparams, learning_rate=lr)
 
-            # correct word probability (1,1)
-            c_o_t = T.exp(V[y_t].dot(s_t)+c[y_t])
-
-            # negative word probability (k,1)
-            n_o_t = T.exp(V[neg_y_t].dot(s_t)+c[neg_y_t])
-
-            # positive probability
-            c_o_p = c_o_t / (c_o_t+self.k*q_w[y_t])
-
-            # negative probability (k,1)
-            n_o_p = q_w[neg_y_t]/(n_o_t+self.k*q_w[neg_y_t])
-
-            # cost for each y in nce
-            cost = -(T.log(c_o_p) + T.sum(T.log(n_o_p)))
-
-            return [cost,s_t]
-        
-        [j, _], updates = theano.scan(
-            train_step,
-            sequences=[x,y,negy],
-            truncate_gradient=self.bptt_truncate,
-            outputs_info=[None,
-                          dict(initial=T.zeros(self.hidden_dim))],
-            non_sequences=self.q_w)
-
-        [o, _], updates = theano.scan(
-            test_step,
-            sequences=x,
-            truncate_gradient=self.bptt_truncate,
-            outputs_info=[None,
-                          dict(initial=T.zeros(self.hidden_dim))])
-
-
-        
-        prediction_error = T.sum(T.nnet.categorical_crossentropy(o, y))
-        cost = T.sum(j)
         
         lr=T.scalar("lr")
         gparams=[T.clip(T.grad(cost,p),-10,10) for p in self.params]
@@ -130,8 +112,8 @@ class GRULM:
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
 
-        self.train=theano.function(inputs=[x,y,negy,lr],
+        self.train=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.negy,lr],
                                    outputs=cost,
                                    updates=updates)
-        self.test=theano.function(inputs=[x,y],
-                                  outputs=prediction_error)
+        self.test=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.negy],
+                                  outputs=[cost,predicted])
