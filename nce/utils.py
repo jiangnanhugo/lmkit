@@ -2,6 +2,41 @@ import numpy as np
 import cPickle as pickle
 import theano
 
+def alias_setup(probs):
+    K= len(probs)
+    q=np.zeros(K)
+    J=np.zeros(K,dtype=np.int32)
+
+    # Sort the data into the outcomes with probabilities
+    # that are larger and smaller than 1/K;
+    smaller=[]
+    larger=[]
+    for idx,probs in enumerate(probs):
+        q[idx]=K*probs
+        if q[idx]<1.0:
+            smaller.append(idx)
+        else:
+            larger.append(idx)
+
+
+    # Loop though and create little binary mixtures that
+    # appropriately allocate the laeger outcomes over the
+    # overall uniform mixture.
+    while len(smaller)>0 and len(larger)>0:
+        small=smaller.pop()
+        large=larger.pop()
+
+        J[small]=large
+        q[large]=q[large]-(1.0-q[small])
+
+        if q[large]<1.0:
+            smaller.append(large)
+        else:
+            larger.append(large)
+
+    return J,q
+
+
 def Q_w(vocab,alpha):
     """
     weight for blackout the 1/relative frequence of the word
@@ -16,45 +51,51 @@ def Q_w(vocab,alpha):
 
     return np.asarray(vocab_p,dtype=theano.config.floatX)
 
-def blackout(vocab_p,k,pos_index):
-    """
-    sampling K negative word from q_dis, Sk != i
-    """
-    ne_sample = []
-    while len(ne_sample) < k:
-        p = np.random.choice(len(vocab_p),1, p=vocab_p)[0]
-        if p == pos_index:
-            pass
+
+
+
+def alias_draw(J,q,k,pos_idx):
+    '''
+    sampling K negative word from q_dis, Sk!=i
+    :param J:
+    :param q:
+    :param k:
+    :param pos_idx:
+    :return:
+    '''
+    K=len(J)
+
+    # Draw from the overall uniform mixture.
+    kk=np.random.rand(k*3)*K
+    kk = [int(np.floor(x)) for x in kk]
+
+    ne_sample=[]
+    for it in kk:
+        if len(ne_sample)==k:
+            break
+        if np.random.rand()<q[it]:
+            if it !=pos_idx:
+                ne_sample.append(it)
         else:
-            ne_sample.append(p)
+            if J[it]!=pos_idx:
+                ne_sample.append(J[it])
+    return ne_sample
 
-    return np.asarray(ne_sample)
 
-
-def negative_sample(pos_y,k,vocab_p):
+def negative_sample(pos_y,k,J,q):
     """
-    blackout sample for integer vector pos_y
+    sample for integer vector pos_y
     """
 
     neg_m = []
     for pos_index in pos_y:
-        neg_m.append(blackout(vocab_p,k,pos_index))
+        neg_m.append(alias_draw(J,q,k,pos_index))
 
+    #print neg_m
     return np.asarray(neg_m,dtype=np.int32)
 
 
 
-def save_model(f,model):
-    ps={}
-    for p in model.params:
-        ps[p.name]=p.get_value()
-    pickle.dump(ps,open(f,'wb'))
-
-def load_model(f,model):
-    ps=pickle.load(open(f,'rb'))
-    for p in model.params:
-        p.set_value(ps[p.name])
-    return model
 
 class TextIterator:
     def __init__(self,source,maxlen,n_words_source=-1):

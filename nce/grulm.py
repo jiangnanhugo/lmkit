@@ -3,7 +3,7 @@ import theano as theano
 import theano.tensor as T
 from updates import *
 class GRULM:
-    def __init__(self,hidden_dim, word_dim, bptt_truncate=-1,k=10,optimizer='sgd'):
+    def __init__(self,hidden_dim, word_dim,q_w, bptt_truncate=-1,k=10,optimizer='sgd'):
         # Assign instance variables
         self.word_dim = word_dim
         self.hidden_dim = hidden_dim
@@ -25,6 +25,8 @@ class GRULM:
 
         self.c = theano.shared(value=init_c.astype(theano.config.floatX),name='c')
 
+        self.q_w = theano.shared(value=q_w, name='vocabulary distribution', borrow=True)
+
         self.params=[self.E,self.U,self.W,self.V,self.b,self.c]
         self.build()
     
@@ -37,7 +39,7 @@ class GRULM:
         # negy is the negative sampling for nce
         # shape (len(y),k)
         negy = T.lmatrix('negy')
-        q_w = T.vector('q_w')
+
 
         def test_step(x_t,s_t1_prev):
             # Word embedding layer
@@ -52,7 +54,6 @@ class GRULM:
 
             # Final output calculation
             # Theano's softmax returns a matrix with one row, we only need the row
-
 
             # probability of output o_t
             o_t = T.nnet.softmax(V.dot(s_t) + c)[0]
@@ -104,7 +105,7 @@ class GRULM:
             truncate_gradient=self.bptt_truncate,
             outputs_info=[None,
                           dict(initial=T.zeros(self.hidden_dim))],
-            non_sequences=q_w)
+            non_sequences=self.q_w)
 
         [o, _], updates = theano.scan(
             test_step,
@@ -129,8 +130,8 @@ class GRULM:
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
 
-        self.train=theano.function(inputs=[x,y,negy,q_w,lr],
+        self.train=theano.function(inputs=[x,y,negy,lr],
                                    outputs=cost,
                                    updates=updates)
         self.test=theano.function(inputs=[x,y],
-                                     outputs=prediction_error)
+                                  outputs=prediction_error)
