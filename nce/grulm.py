@@ -1,7 +1,7 @@
 import numpy as np
 import theano as theano
 import theano.tensor as T
-from updates import *
+from lmkit.updates import *
 class GRULM:
     def __init__(self,hidden_dim, word_dim,q_w, bptt_truncate=-1,k=10,optimizer='sgd'):
         # Assign instance variables

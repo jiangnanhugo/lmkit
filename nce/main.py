@@ -1,26 +1,32 @@
 import time
-from lmkit.utils import save_model,load_model
 from utils import *
 from grulm import GRULM
 import cPickle as pickle
 from argparse import ArgumentParser
+from lmkit.utils import *
 
-lr=0.01
-p=0.5
+lr=0.001
+p=0.1
 NEPOCH=100
 
-n_input=30
-n_hidden=20
-maxlen=30
-cell='gru'
-optimizer='adam'
+n_input=256   # embedding of input word
+n_hidden=256  # hidden state layer size
 argument = ArgumentParser(usage='it is usage tip', description='no')
 argument.add_argument('--train_file', default='../data/wikitext-2/idx_wiki.train.tokens', type=str, help='train dir')
 argument.add_argument('--valid_file', default='../data/wikitext-2/idx_wiki.valid.tokens', type=str, help='valid dir')
 argument.add_argument('--test_file', default='../data/wikitext-2/idx_wiki.test.tokens', type=str, help='test dir')
+argument.add_argument('--goto_line', default=10, type=int, help='goto the specific line index')
+argument.add_argument('--model_dir', default='./model/parameters_123456.pkl', type=str, help='model dir to dump')
 argument.add_argument('--vocab_size', default=33279, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=10, type=int, help='batch size')
+argument.add_argument('--rnn_cell', default='lstm', type=str, help='lstm/gru/fastgru/fastlstm')
+argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
+argument.add_argument('--mode',default='train',type=str,help='train/valid/test')
+argument.add_argument('--maxlen',default=256,type=int,help='constrain the maxlen for training')
 argument.add_argument('--vocab_freq_file', default='../data/wikitext-2/vocab_freq.pkl', type=str, help='vocab_freq')
+argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
+argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
+argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
 
 args = argument.parse_args()
 
@@ -28,19 +34,24 @@ args = argument.parse_args()
 train_datafile=args.train_file
 valid_datafile=args.valid_file
 test_datafile=args.test_file
-vocabulary_size=args.vocab_size
+model_dir=args.model_dir
+goto_line=args.goto_line
 n_batch=args.batch_size
+vocabulary_size=args.vocab_size
+rnn_cell=args.rnn_cell
+optimizer= args.optimizer
+bptt=args.bptt
+maxlen=args.maxlen
+disp_freq=50
+valid_freq=args.valid_freq
+test_freq=args.test_freq
+save_freq=args.save_freq
 vocab_freq_file=args.vocab_freq_file
 n_words_source=-1
 
-disp_freq=100
-sample_freq=200000
-save_freq=500000
-valid_freq=100000
-test_freq=2000000
-clip_freq=5000000
 
-k = 200
+
+k = vocabulary_size/20
 alpha = 0.75
 
 def evaluate(test_data,model):
@@ -60,12 +71,12 @@ def train(lr):
 
     # Load data
     print 'loading dataset...'
-    train_data=TextIterator(train_datafile,n_words_source=n_words_source,maxlen=maxlen)
-    valid_data = TextIterator(valid_datafile, n_words_source=n_words_source, maxlen=maxlen)
-    test_data=TextIterator(test_datafile,n_words_source=n_words_source,maxlen=maxlen)
+    train_data=TextIterator(train_datafile,maxlen=maxlen)
+    valid_data = TextIterator(valid_datafile,maxlen=maxlen)
+    test_data=TextIterator(test_datafile,maxlen=maxlen)
 
     print 'building model...'
-    model=GRULM(n_hidden,vocabulary_size,vocab_p,k)
+    model=GRULM(n_hidden,vocabulary_size,vocab_p,k,optimizer=optimizer)
     print 'training start...'
     start=time.time()
     for epoch in xrange(NEPOCH):
