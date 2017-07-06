@@ -6,14 +6,17 @@ elif theano.config.device=='gpu':
 
 
 from lmkit.layers.gru import GRU
+from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.lstm import LSTM
+from lmkit.layers.FastLSTM import FastLSTM
+from lmkit.layers.rnnblock import RnnBlock
 
 
 from lmkit.layers.level_softmax import level_softmax
 from lmkit.updates import *
 
 class RNNLM(object):
-    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5):
+    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5,bptt=-1):
         self.x=T.imatrix('batched_sequence_x')  # n_batch, maxlen
         self.x_mask=T.fmatrix('x_mask')
         self.y=T.imatrix('batched_sequence_y')
@@ -28,6 +31,8 @@ class RNNLM(object):
                            dtype=theano.config.floatX)
         self.E=theano.shared(value=init_Embd,name='word_embedding',borrow=True)
 
+        self.bptt = bptt
+
         self.cell=cell
         self.optimizer=optimizer
         self.p=p
@@ -40,16 +45,31 @@ class RNNLM(object):
 
     def build(self):
         print 'building rnn cell...'
-        if self.cell=='gru':
-            hidden_layer=GRU(self.rng,
-                             self.n_input,self.n_hidden,self.n_batch,
-                             self.x,self.E,self.x_mask,
-                             self.is_train,self.p)
-        else:
-            hidden_layer=LSTM(self.rng,
-                              self.n_input,self.n_hidden,self.n_batch,
-                              self.x,self.E,self.x_mask,
-                              self.is_train,self.p)
+        hidden_layer = None
+        if self.cell == 'gru':
+            hidden_layer = GRU(self.rng,
+                               self.n_input, self.n_hidden,
+                               self.x, self.E, self.x_mask,
+                               self.is_train, self.p, self.bptt)
+        elif self.cell == 'fastgru':
+            hidden_layer = FastGRU(self.rng,
+                                   self.n_input, self.n_hidden,
+                                   self.x, self.E, self.x_mask,
+                                   self.is_train, self.p, self.bptt)
+        elif self.cell == 'lstm':
+            hidden_layer = LSTM(self.rng,
+                                self.n_input, self.n_hidden,
+                                self.x, self.E, self.x_mask,
+                                self.is_train, self.p, self.bptt)
+        elif self.cell == 'fastlstm':
+            hidden_layer = FastLSTM(self.rng,
+                                    self.n_input, self.n_hidden,
+                                    self.x, self.E, self.x_mask,
+                                    self.is_train, self.p, self.bptt)
+        elif self.cell.startswith('rnnblock'):
+            mode = self.cell.split('.')[-1]
+            hidden_layer = RnnBlock(self.rng,
+                                    self.n_hidden, self.x, self.E, self.x_mask, self.is_train, self.p, mode=mode)
         print 'building softmax output layer...'
         output_layer=level_softmax(self.n_hidden,self.n_output,hidden_layer.activation,self.y)
         cost = self.categorical_crossentropy(output_layer.activation)

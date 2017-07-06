@@ -1,6 +1,6 @@
 import time
 from utils import *
-from grulm import GRULM
+from rnnlm import RNNLM
 import cPickle as pickle
 from argparse import ArgumentParser
 from lmkit.utils import *
@@ -77,7 +77,7 @@ def train(lr):
     test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
 
     print 'building model...'
-    model=GRULM(n_input,n_hidden,vocabulary_size,
+    model=RNNLM(n_input,n_hidden,vocabulary_size,
                 cell=rnn_cell,optimizer=optimizer,p=p,
                 q_w=vocab_p,k=k)
     print 'training start...'

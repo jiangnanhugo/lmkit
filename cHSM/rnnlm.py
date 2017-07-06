@@ -4,7 +4,7 @@ from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.layers.gru import GRU
 from lmkit.layers.lstm import LSTM
 from lmkit.updates import *
-from lmkit.layers.c_softmax import C_softmax
+from c_softmax import C_softmax
 import cPickle as pickle
 
 if theano.config.device == 'cpu':
@@ -70,8 +70,8 @@ class RNNLM(object):
         softmax_shape = (self.n_hidden, self.n_class, self.n_output)
         output_layer = C_softmax(softmax_shape,
                                  hidden_layer.activation,
-                                 self.y_node, self.y_node_mask, self.y_mask,self.node_maxlen)
-        cost = -T.mean(output_layer.activation)
+                                 self.y_node, self.y_node_mask,self.node_maxlen)
+        cost = self.categorical_crossentropy(output_layer.activation)
 
         self.params = [self.E, ]
         self.params += hidden_layer.params
@@ -88,7 +88,7 @@ class RNNLM(object):
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
         self.train = theano.function(inputs=[self.x, self.x_mask, self.y_node, self.y_mask, lr],
-                                     outputs=cost,
+                                     outputs=[cost,output_layer.node],
                                      updates=updates,
                                      givens={self.is_train: np.cast['int32'](1)})
         '''
@@ -99,3 +99,6 @@ class RNNLM(object):
                                     outputs=cost,
                                     givens={self.is_train: np.cast['int32'](0)})
         '''
+
+    def categorical_crossentropy(self, y_pred):
+        return -T.sum(y_pred * self.y_mask.flatten()) / T.sum(self.y_mask)

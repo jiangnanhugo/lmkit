@@ -67,7 +67,7 @@ class RNNLM(object):
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
-        cost= self.categorical_crossentropy(output_layer.activation, self.y) # nll
+        cost= self.categorical_crossentropy(output_layer.activation, self.y)
         self.params = [self.E, ]
         self.params += hidden_layer.params
         self.params += output_layer.params

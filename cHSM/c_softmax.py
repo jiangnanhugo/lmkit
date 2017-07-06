@@ -15,9 +15,8 @@ def log_softmax_masked(x,mask):
 # class-based hierarchical softmax
 class C_softmax(object):
 
-    def __init__(self,shape,x,y_node,y_node_mask,maskY,node_maxlen):
+    def __init__(self,shape,x,y_node,y_node_mask,node_maxlen):
         """
-
         :param shape: used for passing dimension parameters.
         :param x: [maxlen*batch_size,hidden_size], output of last layer, input of this layer.
         :param y_node: [2, maxlen* batch_size], 2 stands for (class_id,word_id)
@@ -31,7 +30,7 @@ class C_softmax(object):
         self.x=x.reshape([-1, x.shape[-1]])
         self.y_node=y_node
         self.node_maxlen=node_maxlen
-        self.maskY=maskY
+
 
         init_cp_matrix = np.asarray(self.rng.uniform(low=-np.sqrt(6. / (self.in_size)),
                                                    high=np.sqrt(6. / (self.in_size)),
@@ -102,15 +101,11 @@ class C_softmax(object):
         # [maxlen* batch_size, 1]
         # last dimension denotes the log probability of this word.
         self.predicted=log_softmax_masked(node,m)
-        self.activation=logprobs*self.maskY
-        #self.logprobs=logprobs
+        self.activation=logprobs
+        self.word_prob=log_word_probs.take(self.y_node[1])
+        self.node=node
 
         # temp
         #temp=T.nnet.softmax(T.dot(self.x,self.cp_matrix)+self.cb)
         #self.log_class_probs=-T.nnet.categorical_crossentropy(temp,self.y_node[0])
         #self.log_class_probs2=log_class_probs.take(self.y_node[0])
-
-
-
-
-

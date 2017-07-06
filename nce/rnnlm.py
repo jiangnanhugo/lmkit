@@ -14,7 +14,7 @@ if theano.config.device=='cpu':
     from theano.tensor.shared_randomstreams import RandomStreams
 else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-class GRULM:
+class RNNLM(object):
     def __init__(self,n_input, n_hidden, n_output,
                  cell='gru', optimizer='sgd',p=0.1,
                  q_w=None,k=10):

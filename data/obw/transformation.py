@@ -1,12 +1,17 @@
 import cPickle as pickle
-
+import sys
+LINES=30301028
 def build_vocab(filename,vocab_size=-1):
-    fr=open(filename,'r').read().split('\n')
+    fr=open(filename,'r')
     vocab=dict()
     vocab['<s>'] = 0
     vocab['</s>'] = 0
+    index=0
     for line in fr:
-        words=line.split(' ')
+        index+=1
+        print "%.4f\r" % (index*1.0/LINES),
+        sys.stdout.flush()
+        words=line.strip().split(' ')
         vocab['<s>']+=1
         vocab['</s>']+=1
         for w in words:
@@ -67,4 +72,5 @@ build_vocab('dataset.tr',vocab_size=793471)
 corpus2index('dataset.tr')
 corpus2index('dataset.te')
 '''
-build_vocab('./ptb.train.txt')
+build_vocab('train.txt')
+corpus2index('train.txt')

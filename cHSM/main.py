@@ -8,6 +8,7 @@ import logging
 from logging.config import fileConfig
 
 fileConfig('../logging_config.ini')
+np.set_printoptions(threshold=np.nan)
 logger = logging.getLogger()
 from argparse import ArgumentParser
 import sys
@@ -33,12 +34,16 @@ argument.add_argument('--node_mask_path', default='node_mask.pkl', type=str, hel
 argument.add_argument('--prefix_path', default='prefix.pkl', type=str,
                       help='classes and words prefix configures pickle file.')
 
+argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
+argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
+argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
+argument.add_argument('--goto_line', default=0, type=int, help='goto the specific line index')
 
 argument.add_argument('--vocab_size', default=33287, type=int, help='vocab size')
-argument.add_argument('--batch_size', default=20, type=int, help='batch size')
+argument.add_argument('--batch_size', default=2, type=int, help='batch size')
 argument.add_argument('--rnn_cell', default='gru', type=str, help='recurrent unit type')
-argument.add_argument("--save_freq", default=0xffffffff, type=int, help="save frequency")
 argument.add_argument('--mode', default='train', type=str, help='train/valid/test')
+argument.add_argument('--maxlen',default=200,type=int,help='constrain the maxlen for training')
 
 args = argument.parse_args()
 
@@ -50,15 +55,15 @@ vocab_size = args.vocab_size
 rnn_cell = args.rnn_cell
 prefix_path = args.prefix_path
 node_mask_path = args.node_mask_path
+maxlen=args.maxlen
 model_dir = args.model_dir
 reload_dumps = args.reload_dumps
 
 disp_freq = 4
-valid_freq = 1000
-test_freq = 2000
-save_freq = args.save_freq
-clip_freq = 9000
-pred_freq = 20000
+goto_line=args.goto_line
+valid_freq=args.valid_freq
+test_freq=args.test_freq
+save_freq=args.save_freq
 
 
 def evaluate(test_data, model):
@@ -74,9 +79,9 @@ def train(lr):
     # Load data
     logger.info('loading dataset...')
 
-    train_data = TextIterator(train_datafile, prefix_path=prefix_path, n_batch=n_batch)
-    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch)
-    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch)
+    train_data = TextIterator(train_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
+    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
+    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
 
     logger.info('building model...')
     model = RNNLM(n_input, n_hidden, vocab_size, rnn_cell=rnn_cell, optimizer=optimizer, p=p,
@@ -87,31 +92,27 @@ def train(lr):
         model = load_model(model_dir, model)
     else:
         print "init parameters...."
-    start = time.time()
-    idx = 0
+    if goto_line>0:
+        train_data.goto_line(goto_line)
+        print 'goto line:',goto_line
+    print 'training start...'
+    start=time.time()
+    idx=goto_line
     logger.info('training start...')
     for epoch in xrange(NEPOCH):
         error = 0
         for x, x_mask, y_node, y_mask in train_data:
             idx += 1
-            cost= model.train(x, x_mask, y_node, y_mask, lr)
 
-            #print classprob.reshape(x.shape)
-            #for x,y in zip(classprob,wordprob):
-            #    print x,y,np.abs(x-y)<1e-5
+            cost,logprob= model.train(x, x_mask, y_node, y_mask, lr)
 
-            #print '-'*80
-            #print wordprob.reshape(x.shape)
-            #print '-'*79
-            #print y_node[0].reshape(x.shape)
-            #print '=' * 80
             error += cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq == 0:
                 logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
-                epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))  # ,'lr:',lr
+                epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
                 error = 0
             if idx % save_freq == 0:
                 print 'dumping...'
@@ -140,9 +141,10 @@ def train(lr):
 
 
 def test():
-    valid_data = TextIterator(valid_datafile, prefix_filepath=prefix_filepath, n_batch=n_batch)
-    test_data = TextIterator(test_datafile, prefix_filepath=prefix_filepath, n_batch=n_batch)
-    model = RNNLM(n_input, n_hidden, vocabulary_size, cell, optimizer, p, )
+    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch)
+    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch)
+    model = RNNLM(n_input, n_hidden, vocab_size, rnn_cell=rnn_cell, optimizer=optimizer, p=p,
+                  n_class=valid_data.n_class, node_maxlen=valid_data.node_maxlen, node_mask_path=node_mask_path)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:', args.model_dir
         model = load_model(args.model_dir, model)
