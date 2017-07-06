@@ -9,8 +9,8 @@ from theano.gpuarray.type import gpuarray_shared_constructor
 
 class RnnBlock(object):
     def __init__(self,rng,n_hidden,x,
-                 E,xmask,is_train,dropout,
-                 n_layer=1,mode='lstm', pre_state=None,**kwargs):
+                 E,xmask,is_train,dropout,mode='lstm',
+                 n_layer=1, pre_state=None,**kwargs):
 
         self.is_train=is_train
         self.dropout=dropout

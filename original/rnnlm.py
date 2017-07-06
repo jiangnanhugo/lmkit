@@ -60,9 +60,10 @@ class RNNLM(object):
                                 self.n_input, self.n_hidden,
                                 self.x, self.E, self.x_mask,
                                 self.is_train, self.p,self.bptt)
-        elif self.cell == 'rnnblock':
+        elif self.cell.startswith('rnnblock'):
+            mode=self.cell.split('.')[-1]
             hidden_layer=RnnBlock(self.rng,
-                                  self.n_hidden,self.x,self.E,self.x_mask,self.is_train,self.p)
+                                  self.n_hidden,self.x,self.E,self.x_mask,self.is_train,self.p,mode=mode)
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
