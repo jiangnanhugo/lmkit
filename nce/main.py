@@ -77,7 +77,9 @@ def train(lr):
     test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
 
     print 'building model...'
-    model=GRULM(n_hidden,vocabulary_size,vocab_p,k,optimizer=optimizer)
+    model=GRULM(n_input,n_hidden,vocabulary_size,
+                cell=rnn_cell,optimizer=optimizer,p=p,
+                q_w=vocab_p,k=k)
     print 'training start...'
     start=time.time()
     for epoch in xrange(NEPOCH):

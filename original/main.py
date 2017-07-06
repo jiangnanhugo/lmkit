@@ -4,12 +4,17 @@ from rnnlm import *
 from lmkit.utils import TextIterator,save_model,calculate_wer,load_model
 
 import logging
+from logging.config import fileConfig
+
+fileConfig('../logging_config.ini')
+logger = logging.getLogger()
+
 from argparse import ArgumentParser
-import sys
+
 
 lr=0.001
 p=0.1
-NEPOCH=1
+NEPOCH=20
 n_input=256   # embedding of input word
 n_hidden=256  # hidden state layer size
 
@@ -18,11 +23,11 @@ argument = ArgumentParser(usage='it is usage tip', description='no')
 argument.add_argument('--train_file', default='../data/wikitext-2/idx_wiki.train.tokens', type=str, help='train dir')
 argument.add_argument('--valid_file', default='../data/wikitext-2/idx_wiki.valid.tokens', type=str, help='valid dir')
 argument.add_argument('--test_file', default='../data/wikitext-2/idx_wiki.test.tokens', type=str, help='test dir')
-argument.add_argument('--model_dir', default='./model/parameters_176832.65.pkl', type=str, help='model dir to dump')
+argument.add_argument('--model_dir', default='./model/parameters_123456.pkl', type=str, help='model dir to dump')
 argument.add_argument('--goto_line', default=10, type=int, help='goto the specific line index')
-argument.add_argument('--vocab_size', default=10001, type=int, help='vocab size')
+argument.add_argument('--vocab_size', default=33279, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=10, type=int, help='batch size')
-argument.add_argument('--rnn_cell', default='fastlstm', type=str, help='lstm/gru/fastgru/fastlstm')
+argument.add_argument('--rnn_cell', default='lstm', type=str, help='lstm/gru/fastgru/fastlstm')
 argument.add_argument('--optimizer',default='adam',type=str,help='gradient optimizer: sgd, adam, hf etc.')
 argument.add_argument('--mode',default='train',type=str,help='train/valid/test')
 argument.add_argument('--maxlen',default=256,type=int,help='constrain the maxlen for training')
@@ -55,16 +60,16 @@ save_freq=args.save_freq
 
 def evaluate(test_data,model):
     sumed_cost=0
-    #sumed_wer=[]
-    #n_words=[]
+    sumed_wer=[]
+    n_words=[]
     idx=0
     for x,x_mask,y,y_mask in test_data:
-        nll=model.test(x,x_mask,y,y_mask)
-        #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+        nll,pred_y=model.test(x,x_mask,y,y_mask)
+        sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
         sumed_cost+=nll
         idx+=1#np.sum(y_mask)
-        #n_words.append(np.sum(y_mask))
-    return sumed_cost/(1.0*idx)#,np.sum(sumed_wer)/np.sum(n_words)
+        n_words.append(np.sum(y_mask))
+    return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
 
 def train(lr):
     print 'loading dataset...'
@@ -92,28 +97,23 @@ def train(lr):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq==0:
-                print 'epoch:',epoch,'idx:',idx,'cost:',error/disp_freq,'ppl:',np.exp(error/disp_freq)
+                logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
+                    epoch, idx, (1.0 * disp_freq),np.exp(error / (1.0 * disp_freq))))
                 error=0
             if idx%save_freq==0:
-                print 'dumping...'
+                logger.info( 'dumping...')
                 save_model('./model/parameters_%.2f.pkl'%(time.time()-start),model)
             if idx % valid_freq==0:
-                print 'validing....'
-                valid_cost=evaluate(valid_data,model)
-                print 'valid_cost:',valid_cost,'perplexity:',np.exp(valid_cost)#,"word_error_rate:",mean_wer
+                logger.info('validing...')
+                valid_cost,wer=evaluate(valid_data,model)
+                logger.info('validation cost: %f perplexity: %f,word_error_rate:%f' % (valid_cost, np.exp(valid_cost), wer))
             if idx % test_freq==0:
-                print 'testing...'
-                mean_cost=evaluate(test_data,model)
-                print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
-            #if idx % pred_freq==0:
-            #    print 'predicting...'
-            #    prediction=model.predict(x,x_mask,x.shape[1])
-            #    print prediction[:100]
-            #if idx%clip_freq==0 and lr >=1e-2:
-            #    print 'cliping learning rate:',
-            #    lr=lr*0.9
-            #    print lr
-        sys.stdout.flush()
+                logger.info('testing...')
+                test_cost,wer=evaluate(test_data,model)
+                logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost),wer))
+
+
+
     print "Finished. Time = "+str(time.time()-start)
 
 def test():

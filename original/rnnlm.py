@@ -9,7 +9,7 @@ from lmkit.layers.gru import GRU
 from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.lstm import LSTM
 from lmkit.layers.FastLSTM import FastLSTM
-from rnnblock import RnnBlock
+from lmkit.layers.rnnblock import RnnBlock
 from lmkit.updates import *
 
 
@@ -92,7 +92,7 @@ class RNNLM(object):
                                      givens={self.is_train:np.cast['int32'](1)})
         '''
         self.test = theano.function(inputs=[self.x, self.x_mask,self.y,self.y_mask],
-                                       outputs=cost, #nll
+                                       outputs=[cost,output_layer.predict],
                                        givens={self.is_train: np.cast['int32'](0)})
 
     def categorical_crossentropy(self, y_pred, y_true):

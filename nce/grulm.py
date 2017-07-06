@@ -6,7 +6,7 @@ from lmkit.layers.gru import GRU
 from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.lstm import LSTM
 from lmkit.layers.FastLSTM import FastLSTM
-from rnnblock import RnnBlock
+from lmkit.layers.rnnblock import RnnBlock
 from lmkit.updates import *
 from nce import NCE
 
@@ -34,6 +34,8 @@ class GRULM:
         self.cell=cell
         self.optimizer=optimizer
         self.p=p
+        self.is_train = T.iscalar('is_train')
+        self.rng = RandomStreams(1234)
 
 
         init_Embd = np.asarray(
@@ -46,8 +48,7 @@ class GRULM:
 
         self.q_w = theano.shared(value=q_w, name='vocabulary distribution', borrow=True)
 
-        self.is_train = T.iscalar('is_train')
-        self.rng = RandomStreams(1234)
+
         self.build()
     
     def build(self):
@@ -62,17 +63,17 @@ class GRULM:
             hidden_layer = FastGRU(self.rng,
                                    self.n_input, self.n_hidden,
                                    self.x, self.E, self.x_mask,
-                                   self.is_train, self.p, self.bptt)
+                                   self.is_train, self.p)
         elif self.cell == 'lstm':
             hidden_layer = LSTM(self.rng,
                                 self.n_input, self.n_hidden,
                                 self.x, self.E, self.x_mask,
-                                self.is_train, self.p, self.bptt)
+                                self.is_train, self.p)
         elif self.cell == 'fastlstm':
             hidden_layer = FastLSTM(self.rng,
                                     self.n_input, self.n_hidden,
                                     self.x, self.E, self.x_mask,
-                                    self.is_train, self.p, self.bptt)
+                                    self.is_train, self.p)
         elif self.cell == 'rnnblock':
             hidden_layer = RnnBlock(self.rng,
                                     self.n_hidden, self.x, self.E, self.x_mask, self.is_train, self.p)
