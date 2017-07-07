@@ -1,5 +1,5 @@
 #!/bin/sh
-rnn_cell=fastlstm
+rnn_cell=rnnblock.lstm
 valid_freq=1000
 test_freq=2000
 batch_size=20
