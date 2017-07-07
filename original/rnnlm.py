@@ -62,12 +62,13 @@ class RNNLM(object):
                                 self.is_train, self.p,self.bptt)
         elif self.cell.startswith('rnnblock'):
             mode=self.cell.split('.')[-1]
+            print mode
             hidden_layer=RnnBlock(self.rng,
                                   self.n_hidden,self.x,self.E,self.x_mask,self.is_train,self.p,mode=mode)
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
-        cost= self.categorical_crossentropy(output_layer.activation, self.y)
+        cost= self.categorical_crossentropy(output_layer.activation, self.y) # nll
         self.params = [self.E, ]
         self.params += hidden_layer.params
         self.params += output_layer.params

@@ -1,5 +1,5 @@
 #!/bin/sh
-rnn_cell=rnnblock.lstm
+rnn_cell=rnnblock.rnn_relu
 valid_freq=1000
 test_freq=2000
 batch_size=20

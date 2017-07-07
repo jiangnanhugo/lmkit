@@ -1,5 +1,5 @@
 #!/bin/sh
-rnn_cell=rnnblock.lstm
+rnn_cell=rnnblock.rnn_tanh
 valid_freq=1000
 test_freq=2000
 batch_size=20
@@ -9,7 +9,7 @@ valid_file=../data/wikitext-2/idx_wiki.valid.tokens
 test_file=../data/wikitext-2/idx_wiki.test.tokens
 vocab_size=33279
 check_point=None #./model/parameters_3732.93.pkl
-THEANO_FLAGS="floatX=float32,device=cuda3,mode=FAST_RUN" python main.py --train_file $train_file \
+THEANO_FLAGS="floatX=float32,device=cuda1,mode=FAST_RUN" python main.py --train_file $train_file \
             --valid_file $valid_file \
             --test_file $test_file \
             --vocab_size $vocab_size \

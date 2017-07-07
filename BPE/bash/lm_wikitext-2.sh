@@ -1,15 +1,16 @@
 #!/bin/sh
-rnn_cell=rnnblock.lstm
+rnn_cell=fastlstm
 valid_freq=1000
 test_freq=2000
 batch_size=20
 
-train_file=../data/wikitext-2/idx_wiki.train.tokens
-valid_file=../data/wikitext-2/idx_wiki.valid.tokens
-test_file=../data/wikitext-2/idx_wiki.test.tokens
-vocab_size=33279
+suffix=3000
+train_file=../data/wikitext-2/idx_wiki.train.tokens.$suffix
+valid_file=../data/wikitext-2/idx_wiki.valid.tokens.$suffix
+test_file=../data/wikitext-2/idx_wiki.test.tokens.$suffix
+vocab_size=3328
 check_point=None #./model/parameters_3732.93.pkl
-THEANO_FLAGS="floatX=float32,device=cuda3,mode=FAST_RUN" python main.py --train_file $train_file \
+THEANO_FLAGS="floatX=float32,device=cuda0,mode=FAST_RUN" python main.py --train_file $train_file \
             --valid_file $valid_file \
             --test_file $test_file \
             --vocab_size $vocab_size \
