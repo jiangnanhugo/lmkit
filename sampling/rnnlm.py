@@ -9,6 +9,7 @@ from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.layers.rnnblock import RnnBlock
 from lmkit.updates import *
 from nce import NCE
+from blackout import Blackout
 
 if theano.config.device=='cpu':
     from theano.tensor.shared_randomstreams import RandomStreams
@@ -17,7 +18,7 @@ else:
 class RNNLM(object):
     def __init__(self,n_input, n_hidden, n_output,
                  cell='gru', optimizer='sgd',p=0.1,
-                 q_w=None,k=10):
+                 q_w=None,k=10,sampling='nce'):
         self.x = T.imatrix('batched_sequence_x')  # n_batch, maxlen
         self.x_mask = T.fmatrix('x_mask')
         self.y = T.imatrix('batched_sequence_y')
@@ -30,6 +31,7 @@ class RNNLM(object):
         self.n_output=n_output
 
         self.k=k
+        self.sampling=sampling
         self.optimizer=optimizer
         self.cell=cell
         self.optimizer=optimizer
@@ -79,9 +81,16 @@ class RNNLM(object):
                                     self.n_hidden, self.x, self.E, self.x_mask, self.is_train, self.p)
 
         print 'building softmax output layer...'
-        output_layer = NCE(self.n_hidden, self.n_output,
+        output_layer=None
+        if self.sampling=='nce':
+            output_layer = NCE(self.n_hidden, self.n_output,
                            hidden_layer.activation,self.y,self.y_mask,self.negy,
                            q_w=self.q_w,k=self.k)
+        elif self.sampling=='blackout':
+            output_layer = Blackout(self.n_hidden, self.n_output,
+                               hidden_layer.activation, self.y, self.y_mask, self.negy,
+                               q_w=self.q_w, k=self.k)
+
 
         cost = output_layer.activation
         predicted=output_layer.predict
@@ -113,8 +122,10 @@ class RNNLM(object):
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
 
-        self.train=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.negy,lr],
+        self.train=theano.function(inputs=[self.x,self.x_mask,self.y,self.negy,self.y_mask,lr],
                                    outputs=cost,
-                                   updates=updates)
+                                   updates=updates,
+                                   givens={self.is_train: np.cast['int32'](1)})
         self.test=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.negy],
-                                  outputs=[cost,predicted])
+                                  outputs=[cost,predicted],
+                                  givens={self.is_train: np.cast['int32'](0)})

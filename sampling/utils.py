@@ -82,14 +82,21 @@ def alias_draw(J,q,k,pos_idx):
     return ne_sample
 
 
-def negative_sample(pos_y,k,J,q):
+def negative_sample(pos_y,y_mask,k,J,q):
     """
     sample for integer vector pos_y
     """
 
     neg_m = []
-    for pos_index in pos_y:
-        neg_m.append(alias_draw(J,q,k,pos_index))
+    for pos_indexs,mask_idxes in zip(pos_y,y_mask):
+        neg=[]
+        for pos,m in zip(pos_indexs,mask_idxes):
+            if m!=0:
+                neg.append(alias_draw(J,q,k,pos))
+            else:
+                neg.append([0]*k)
+
+        neg_m.append(neg)
 
     #print neg_m
     return np.asarray(neg_m,dtype=np.int32)

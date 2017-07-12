@@ -28,6 +28,8 @@ argument.add_argument('--valid_freq',default=2000,type=int,help='validation freq
 argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
 argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
 argument.add_argument('--bptt',default=-1,type=int,help='truncated bptt')
+argument.add_argument('--epoch',default=10,type=int,help='maximum epochs')
+
 
 args = argument.parse_args()
 
@@ -52,7 +54,7 @@ n_words_source=-1
 
 
 
-k = vocabulary_size/20
+k = 20#vocabulary_size/20
 alpha = 0.75
 
 def evaluate(test_data,model):
@@ -77,9 +79,7 @@ def train(lr):
     test_data=TextIterator(test_datafile,n_batch=n_batch,maxlen=maxlen)
 
     print 'building model...'
-    model=RNNLM(n_input,n_hidden,vocabulary_size,
-                cell=rnn_cell,optimizer=optimizer,p=p,
-                q_w=vocab_p,k=k)
+    model=RNNLM(n_input,n_hidden,vocabulary_size, cell=rnn_cell,optimizer=optimizer,p=p,q_w=vocab_p,k=k)
     print 'training start...'
     start=time.time()
     for epoch in xrange(NEPOCH):
@@ -87,8 +87,11 @@ def train(lr):
         idx=0
         for x,x_mask,y,y_mask in train_data:
             idx+=1
-            negy=negative_sample(y,k,J,q)
-            cost=model.train(x, y, negy,lr)
+            negy=negative_sample(y,y_mask,k,J,q)
+
+            cost=model.train(x,x_mask, y, negy,y_mask,lr)
+            print cost
+
             error+=cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
@@ -107,6 +110,7 @@ def train(lr):
                 print 'testing...'
                 test_cost=evaluate(test_data,model)
                 print 'test cost:',test_cost,'perplexity:',np.exp(test_cost)
+
 
 
     print "Finished. Time = "+str(time.time()-start)
