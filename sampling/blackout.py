@@ -47,7 +47,7 @@ class Blackout(object):
         # cost for each y in blackout
         J_dis = -(T.log(c_o_p) + T.sum(T.log(T.ones_like(n_o_p) - n_o_p)))
 
-        
+
         # cost for each y in nce
         self.activation = -T.mean(T.log(c_o_p) + T.sum(T.log(n_o_p)))
         att = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
