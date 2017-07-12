@@ -54,7 +54,7 @@ n_words_source=-1
 
 
 
-k = 20#vocabulary_size/20
+k = vocabulary_size/20
 alpha = 0.75
 
 def evaluate(test_data,model):
@@ -92,6 +92,7 @@ def train(lr):
             cost=model.train(x,x_mask, y, negy,y_mask,lr)
             print cost
 
+
             error+=cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
@@ -110,6 +111,7 @@ def train(lr):
                 print 'testing...'
                 test_cost=evaluate(test_data,model)
                 print 'test cost:',test_cost,'perplexity:',np.exp(test_cost)
+
 
 
 

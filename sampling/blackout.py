@@ -30,23 +30,25 @@ class Blackout(object):
 
     def build(self):
         # blackout version output probability
-        # correct word probability (1,1)
-        c_o_t = T.exp(self.W[self.y]*self.x + self.b[self.y])
+        # correct word probability (b,1)
+        c_o_t = T.exp(T.sum(self.W[self.y] * self.x, axis=-1) + self.b[self.y])
 
-        # negative word probability (k,1)
-        n_o_t = T.exp(self.W[self.y_neg]*self.x.dimshuffle(0,'x',1) + self.b[self.y_neg])
+        # negative word probability (b,k)
+        n_o_t = T.exp(T.sum(self.W[self.y_neg] * self.x.dimshuffle(0, 'x', 1), axis=-1) + self.b[self.y_neg])
 
         # sample set probability
-        t_o = (self.q_w[self.y] * c_o_t) + T.sum(self.q_w[self.y_neg] * n_o_t)
+        t_o = (self.q_w[self.y] * c_o_t) + T.sum(self.q_w[self.y_neg] * n_o_t,axis=-1)
 
-        # positive probability
+        # positive probability (b,1)
         c_o_p = self.q_w[self.y] * c_o_t / t_o
 
-        # negative probability (k,1)
-        n_o_p = self.q_w[self.y_neg] * n_o_t / t_o
+        # negative probability (b,k)
+        n_o_p = self.q_w[self.y_neg] * n_o_t / t_o.dimshuffle(0,'x')
+        self.sumed=t_o
+        self.other=T.log(c_o_p) + T.sum(T.log(1. - n_o_p),axis=-1)
 
         # cost for each y in blackout
-        self.activation = -(T.log(c_o_p) + T.sum(T.log(T.ones_like(n_o_p) - n_o_p)))
+        self.activation = -T.sum((T.log(c_o_p) + T.sum(T.log(1. - n_o_p),axis=-1))*self.y_mask)/(T.sum(self.y_mask))#*(self.k+1))
         att = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
         self.predict = T.argmax(att, axis=-1)
 
