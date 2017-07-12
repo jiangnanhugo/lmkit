@@ -5,6 +5,11 @@ import cPickle as pickle
 from argparse import ArgumentParser
 from lmkit.utils import *
 
+import logging
+from logging.config import fileConfig
+fileConfig('../logging_config.ini')
+logger = logging.getLogger()
+
 lr=0.001
 p=0.1
 NEPOCH=100
@@ -88,29 +93,27 @@ def train(lr):
         for x,x_mask,y,y_mask in train_data:
             idx+=1
             negy=negative_sample(y,y_mask,k,J,q)
-
             cost=model.train(x,x_mask, y, negy,y_mask,lr)
-            print cost
-
-
+            #print cost
             error+=cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq==0:
-                print 'epoch:',epoch,'idx:',idx,'cost:',error/disp_freq
+                logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
+                    epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
                 error=0
             if idx%save_freq==0:
-                print 'dumping...'
-                save_model('model/parameters_%.2f.pkl'%(time.time()-start),model)
-            if idx % valid_freq == 0:
-                print 'valding...'
-                valid_cost = evaluate(valid_data, model)
-                print 'valid cost:', valid_cost, 'perplexity:', np.exp(valid_cost)
-            if idx % test_freq==0:
-                print 'testing...'
-                test_cost=evaluate(test_data,model)
-                print 'test cost:',test_cost,'perplexity:',np.exp(test_cost)
+                logger.info( 'dumping...')
+                save_model('./model/parameters_%.2f.pkl'%(time.time()-start),model)
+            if idx % valid_freq==0 :
+                logger.info('validing...')
+                valid_cost,wer=evaluate(valid_data,model)
+                logger.info('validation cost: %f perplexity: %f,word_error_rate:%f' % (valid_cost, np.exp(valid_cost), wer))
+            if idx % test_freq==0 :
+                logger.info('testing...')
+                test_cost,wer=evaluate(test_data,model)
+                logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost),wer))
 
 
 

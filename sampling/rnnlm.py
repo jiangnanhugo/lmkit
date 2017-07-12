@@ -18,7 +18,7 @@ else:
 class RNNLM(object):
     def __init__(self,n_input, n_hidden, n_output,
                  cell='gru', optimizer='sgd',p=0.1,
-                 q_w=None,k=10,sampling='blackout'):
+                 q_w=None,k=10,sampling='nce'):
         self.x = T.imatrix('batched_sequence_x')  # n_batch, maxlen
         self.x_mask = T.fmatrix('x_mask')
         self.y = T.imatrix('batched_sequence_y')
