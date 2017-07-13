@@ -64,11 +64,18 @@ alpha = 0.75
 
 def evaluate(test_data,model):
     sumed_cost=0
-    index=0
-    for (x,y) in test_data:
-        index+=1
-        sumed_cost+=model.test(x,y)
-    return sumed_cost/index
+    sumed_wer=[]
+    n_words=[]
+    idx=0
+    for x,x_mask,y,y_mask in test_data:
+        #nll,pred_y=model.test(x,x_mask,y,y_mask)
+        #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+        sumed_wer.append(1.)
+        sumed_cost+=1.0
+        idx+=1#np.sum(y_mask)
+        #n_words.append(np.sum(y_mask))
+        n_words.append(1.)
+    return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
 
 
 def train(lr):

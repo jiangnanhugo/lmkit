@@ -14,7 +14,6 @@ from argparse import ArgumentParser
 
 lr=0.001
 p=0.1
-NEPOCH=20
 n_input=256   # embedding of input word
 n_hidden=256  # hidden state layer size
 
@@ -35,6 +34,7 @@ argument.add_argument('--valid_freq',default=2000,type=int,help='validation freq
 argument.add_argument('--save_freq',default=80000,type=int,help='save frequency')
 argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
 argument.add_argument('--bptt',default=-1,type=int,help='truncated bptt')
+argument.add_argument('--epochs',default=10,type=int,help='max epochs')
 
 
 
@@ -54,6 +54,7 @@ optimizer= args.optimizer
 bptt=args.bptt
 maxlen=args.maxlen
 disp_freq=100
+NEPOCH=args.epochs
 valid_freq=args.valid_freq
 test_freq=args.test_freq
 save_freq=args.save_freq

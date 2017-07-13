@@ -40,8 +40,8 @@ class level_softmax(object):
 
         self.logitx_shape=x.shape
 
-        x=x.reshape((-1,self.logitx_shape[2]))
-        y=y.reshape((y.shape[0]*y.shape[1],1))
+        x=x.reshape((-1,self.logitx_shape[-1]))
+        y=y.reshape((-1,1))
 
         init_W1=np.asarray(np.random.uniform(low=-np.sqrt(1./n_input),
                                              high=np.sqrt(1./n_input),

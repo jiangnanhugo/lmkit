@@ -1,7 +1,7 @@
 import theano
 if theano.config.device=='cpu':
     from theano.tensor.shared_randomstreams import RandomStreams
-elif theano.config.device=='gpu':
+else:
     from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 
 
@@ -83,15 +83,15 @@ class RNNLM(object):
         gparams=[T.clip(T.grad(cost,p),-10,10) for p in self.params]
         updates=sgd(self.params,gparams,lr)
 
-        self.train=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.n_batch,lr],
+        self.train=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,lr],
                                    outputs=cost,
                                    updates=updates,
                                    givens={self.is_train:np.cast['int32'](1)})
 
-        self.predict=theano.function(inputs=[self.x,self.x_mask,self.n_batch],
+        self.predict=theano.function(inputs=[self.x,self.x_mask],
                                      outputs=output_layer.predicted,
                                      givens={self.is_train:np.cast['int32'](0)})
-        self.test = theano.function(inputs=[self.x, self.x_mask, self.y, self.y_mask, self.n_batch],
+        self.test = theano.function(inputs=[self.x, self.x_mask, self.y, self.y_mask],
                                     outputs=cost,
                                     givens={self.is_train: np.cast['int32'](0)})
 
@@ -99,7 +99,7 @@ class RNNLM(object):
     def categorical_crossentropy(self,y_pred):
         return -T.sum(T.log(y_pred)*self.y_mask.flatten())/T.sum(self.y_mask)
 
-    def categorical_crossentropy2(self, y_pred, y_true=None):
-        nll = T.nnet.categorical_crossentropy(y_pred, y_true.flatten())
+    def categorical_crossentropy2(self, y_pred):
+        nll = T.nnet.categorical_crossentropy(y_pred, self.y.flatten())
         return T.sum(nll * self.y_mask.flatten()) / T.sum(self.y_mask)
     

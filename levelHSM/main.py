@@ -55,12 +55,19 @@ test_freq=args.test_freq
 save_freq=args.save_freq
 
 def evaluate(test_data,model):
-    cost=0
-    index=0
+    sumed_cost=0
+    sumed_wer=[]
+    n_words=[]
+    idx=0
     for x,x_mask,y,y_mask in test_data:
-        index+=1
-        cost+=model.test(x,x_mask,y,y_mask,x.shape[1])
-    return cost/index
+        nll,pred_y=model.test(x,x_mask,y,y_mask)
+        #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+        sumed_wer.append(1.)
+        sumed_cost+=nll
+        idx+=1#np.sum(y_mask)
+        #n_words.append(np.sum(y_mask))
+        n_words.append(1.)
+    return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
 
 def train(lr):
     # Load data
@@ -80,28 +87,28 @@ def train(lr):
         for x,x_mask,y,y_mask in train_data:
             idx+=1
             beg_time=time.time()
-            cost=model.train(x,x_mask,y,y_mask,x.shape[1],lr)
+            cost=model.train(x,x_mask,y,y_mask,lr)
             error+=cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq==0:
                 logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
-                    epoch, idx, (1.0 * disp_freq),np.exp(error / (1.0 * disp_freq))))
+                    epoch, idx, (error / disp_freq), np.exp(error / (1.0 * disp_freq))))
                 error=0
             if idx%save_freq==0:
                 logger.info( 'dumping...')
                 save_model('./model/parameters_%.2f.pkl'%(time.time()-start),model)
-            if idx % valid_freq==0:
+            if idx % valid_freq==0 :
                 logger.info('validing...')
                 valid_cost,wer=evaluate(valid_data,model)
                 logger.info('validation cost: %f perplexity: %f,word_error_rate:%f' % (valid_cost, np.exp(valid_cost), wer))
-            if idx % test_freq==0:
+            if idx % test_freq==0 :
                 logger.info('testing...')
                 test_cost,wer=evaluate(test_data,model)
                 logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost),wer))
 
-        sys.stdout.flush()
+  
 
     print "Finished. Time = "+str(time.time()-start)
 
