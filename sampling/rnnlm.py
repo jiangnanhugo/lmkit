@@ -94,6 +94,7 @@ class RNNLM(object):
 
         cost = output_layer.activation
         predicted=output_layer.predict
+        nll=self.categorical_crossentropy(output_layer.probability,self.y)
 
 
         self.params = [self.E, ]
@@ -126,6 +127,16 @@ class RNNLM(object):
                                    outputs=cost,
                                    updates=updates,
                                    givens={self.is_train: np.cast['int32'](1)})
-        self.test=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask,self.negy],
-                                  outputs=[cost,predicted],
+        self.predict = theano.function(inputs=[self.x, self.x_mask],
+                                    outputs=predicted,
+                                    givens={self.is_train: np.cast['int32'](0)})
+        self.test=theano.function(inputs=[self.x,self.x_mask,self.y,self.y_mask],
+                                  outputs=[nll,predicted],
                                   givens={self.is_train: np.cast['int32'](0)})
+
+    def categorical_crossentropy(self, y_pred, y_true):
+        y_true = y_true.flatten()
+        mask=self.y_mask.flatten()
+        nll = T.nnet.categorical_crossentropy(y_pred, y_true)
+        batch_nll=T.sum(nll*mask)
+        return batch_nll/ T.sum(mask)# ,batch_nll

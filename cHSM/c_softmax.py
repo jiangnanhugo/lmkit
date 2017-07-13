@@ -109,3 +109,4 @@ class C_softmax(object):
         #temp=T.nnet.softmax(T.dot(self.x,self.cp_matrix)+self.cb)
         #self.log_class_probs=-T.nnet.categorical_crossentropy(temp,self.y_node[0])
         #self.log_class_probs2=log_class_probs.take(self.y_node[0])
+

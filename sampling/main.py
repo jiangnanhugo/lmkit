@@ -59,7 +59,7 @@ n_words_source=-1
 
 
 
-k = vocabulary_size/20
+k = 40#vocabulary_size/20
 alpha = 0.75
 
 def evaluate(test_data,model):
@@ -68,10 +68,11 @@ def evaluate(test_data,model):
     n_words=[]
     idx=0
     for x,x_mask,y,y_mask in test_data:
-        #nll,pred_y=model.test(x,x_mask,y,y_mask)
+        nll,pred_y=model.test(x,x_mask,y,y_mask)
         #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+
         sumed_wer.append(1.)
-        sumed_cost+=1.0
+        sumed_cost+=nll
         idx+=1#np.sum(y_mask)
         #n_words.append(np.sum(y_mask))
         n_words.append(1.)
@@ -94,9 +95,10 @@ def train(lr):
     model=RNNLM(n_input,n_hidden,vocabulary_size, cell=rnn_cell,optimizer=optimizer,p=p,q_w=vocab_p,k=k)
     print 'training start...'
     start=time.time()
+
+    idx = 0
     for epoch in xrange(NEPOCH):
-        error=0
-        idx=0
+        error = 0
         for x,x_mask,y,y_mask in train_data:
             idx+=1
             negy=negative_sample(y,y_mask,k,J,q)
@@ -108,7 +110,7 @@ def train(lr):
                 return -1
             if idx % disp_freq==0:
                 logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
-                    epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
+                    epoch, idx, (error / disp_freq), np.exp(error / (1.0 * disp_freq))))
                 error=0
             if idx%save_freq==0:
                 logger.info( 'dumping...')

@@ -42,6 +42,6 @@ class NCE(object):
         # cost for each y in nce
         self.activation = -T.sum((T.log(c_o_p) + T.sum(T.log(n_o_p),axis=-1))*self.y_mask)/(T.sum(self.y_mask)*(self.k+1))
 
-        att = T.nnet.softmax(T.dot( self.W, self.x) + self.b)
-        self.predict = T.argmax(att, axis=-1)
+        self.probability = T.nnet.softmax(T.dot(self.x,self.W.T) + self.b)
+        self.predict = T.argmax(self.probability, axis=-1)
 
