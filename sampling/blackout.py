@@ -49,6 +49,6 @@ class Blackout(object):
 
         # cost for each y in blackout
         self.activation = -T.sum((T.log(c_o_p) + T.sum(T.log(1. - n_o_p),axis=-1))*self.y_mask)/(T.sum(self.y_mask))#*(self.k+1))
-        att = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
-        self.predict = T.argmax(att, axis=-1)
+        self.probability = T.nnet.softmax(T.dot(self.x, self.W.T) + self.b)
+        self.predict = T.argmax(self.probability, axis=-1)
 
