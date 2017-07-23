@@ -12,11 +12,11 @@ from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.layers.rnnblock import RnnBlock
 
 
-from lmkit.layers.level_softmax import level_softmax
+from level_softmax import level_softmax
 from lmkit.updates import *
 
 class RNNLM(object):
-    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5,bptt=-1):
+    def __init__(self,n_input,n_hidden,n_output,cell='gru',optimizer='sgd',p=0.5,bptt=-1,level1=-1):
         self.x=T.imatrix('batched_sequence_x')  # n_batch, maxlen
         self.x_mask=T.fmatrix('x_mask')
         self.y=T.imatrix('batched_sequence_y')
@@ -32,6 +32,7 @@ class RNNLM(object):
         self.E=theano.shared(value=init_Embd,name='word_embedding',borrow=True)
 
         self.bptt = bptt
+        self.level1=level1
 
         self.cell=cell
         self.optimizer=optimizer
@@ -71,8 +72,12 @@ class RNNLM(object):
             hidden_layer = RnnBlock(self.rng,
                                     self.n_hidden, self.x, self.E, self.x_mask, self.is_train, self.p, mode=mode)
         print 'building softmax output layer...'
-        output_layer=level_softmax(self.n_hidden,self.n_output,hidden_layer.activation,self.y)
-        cost = self.categorical_crossentropy(output_layer.activation)
+        if self.level1>1:
+            level1 = self.level1
+        else:
+            level1= int(np.ceil(np.sqrt(self.n_output)))
+        output_layer=level_softmax(self.n_hidden,level1,self.n_output,hidden_layer.activation,self.y)
+        batch_nll,cost = self.categorical_crossentropy(output_layer.activation)
 
         self.params=[self.E,]
         self.params+=hidden_layer.params
@@ -92,12 +97,13 @@ class RNNLM(object):
                                      outputs=output_layer.predicted,
                                      givens={self.is_train:np.cast['int32'](0)})
         self.test = theano.function(inputs=[self.x, self.x_mask, self.y, self.y_mask],
-                                    outputs=cost,
+                                    outputs=[batch_nll,output_layer.prediction],
                                     givens={self.is_train: np.cast['int32'](0)})
 
 
     def categorical_crossentropy(self,y_pred):
-        return -T.sum(T.log(y_pred)*self.y_mask.flatten())/T.sum(self.y_mask)
+        batch_nll=-T.sum(T.log(y_pred) * self.y_mask.flatten())
+        return batch_nll, batch_nll/T.sum(self.y_mask)
 
     def categorical_crossentropy2(self, y_pred):
         nll = T.nnet.categorical_crossentropy(y_pred, self.y.flatten())

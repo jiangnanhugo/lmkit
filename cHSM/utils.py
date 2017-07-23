@@ -20,6 +20,10 @@ class TextIterator(object):
         node = self.nodes[y]
         return node.transpose()
 
+    def goto_line(self, line_index):
+        for _ in range(line_index):
+            self.source.readline()
+
     def __iter__(self):
         return self
 
@@ -41,7 +45,7 @@ class TextIterator(object):
                 s = [int(w) for w in s]
                 # filter long sentences
                 if self.maxlen > 0 and len(s) > self.maxlen:
-                    continue
+                    s=s[:self.maxlen]
                 source.append(s)
                 if len(source) >= self.n_batch:
                     break
@@ -171,5 +175,52 @@ def convert_prefix(cluster_path, word2idx_filepath, mode='word'):
     return idx2nodes, node_maxlen
 
 
+def convert_prefix2(cluster_path, word2idx_filepath, mode='word'):
+    data = open(cluster_path + '/paths', 'r').read().split('\n')
+    if mode == 'indexes':
+        local_word2idx = defaultdict(int)
+        word2idx = local_word2idx
+
+    idx = 0
+    classes = defaultdict(int)
+    class_vocab = defaultdict(list)
+    for line in data:
+        lined = line.split('\t')
+        if len(lined) != 3:
+            continue
+        binary_prefix, word, _ = lined
+        if binary_prefix not in classes:
+            classes[binary_prefix] = idx
+            idx += 1
+        # print classes[binary_prefix],word2idx[word]
+        class_vocab[classes[binary_prefix]].append(int(word))
+    idx2nodes = [[]] * idx
+
+    node_maxlen = 0
+    class_size = len(class_vocab)
+    for cid in class_vocab:
+        if node_maxlen <= len(class_vocab[cid]):
+            node_maxlen = len(class_vocab[cid])
+        wid = 0
+        for word in class_vocab[cid]:
+            idx2nodes[word] = [cid, wid]
+            wid += 1
+
+    node_mask = np.zeros((class_size, node_maxlen), dtype=theano.config.floatX)
+    for idx in range(len(idx2nodes)):
+        x, y = idx2nodes[idx]
+        node_mask[x][y] = 1.
+
+    print class_size,node_maxlen
+    idx2nodes = np.asarray(idx2nodes, dtype='int32')
+    with open('prefix.pkl', 'w')as f:
+        pickle.dump((idx2nodes, class_size, node_maxlen), f)
+
+    with open('node_mask.pkl', 'w')as f:
+        pickle.dump(node_mask, f)
+
+    return idx2nodes, node_maxlen
+
+
 if __name__ == '__main__':
-    convert_prefix('../data/wikitext-2/idx_wiki.train-c20-p1.out', '../data/wikitext-2', mode='indexes')
+    convert_prefix2('../data/wikitext-2/idx_wiki.train-c300-p1.out', '../data/wikitext-2', mode='idx')

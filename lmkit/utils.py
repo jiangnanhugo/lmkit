@@ -132,10 +132,10 @@ def calculate_wer(y,y_mask,pred_y):
     maxlen,batch_size=y.shape
     wer_score=0
     for b in range(batch_size):
-        print y
+        #print y
         sent_y=prune_sentence(y[:,b],y_mask[:,b])
         sent_pred=prune_sentence(pred_y[:,b],y_mask[:,b])
-        print sent_y
+        #print sent_y
         wer_score+=wer(sent_y,sent_pred)
         #print wer(sent_y,sent_pred),np.sum(y_mask[:b])
     return wer_score

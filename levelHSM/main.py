@@ -10,9 +10,9 @@ fileConfig('../logging_config.ini')
 logger = logging.getLogger()
 
 from argparse import ArgumentParser
-lr=0.001
+lr=0.01
 p=0.1
-NEPOCH=200
+NEPOCH=20
 
 n_input=256
 n_hidden=256
@@ -34,7 +34,8 @@ argument.add_argument('--valid_freq',default=2000,type=int,help='validation freq
 argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
 argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
 argument.add_argument('--bptt',default=-1,type=int,help='truncated bptt')
-
+argument.add_argument('--classes',default=-1,type=int,help='class dimension')
+argument.add_argument('--clip',default=1,type=int,help='clip the learning rate')
 
 args = argument.parse_args()  
 
@@ -44,6 +45,7 @@ test_datafile=args.test_file
 model_dir=args.model_dir
 goto_line=args.goto_line
 n_batch=args.batch_size
+classes=args.classes
 vocabulary_size=args.vocab_size
 rnn_cell=args.rnn_cell
 optimizer= args.optimizer
@@ -54,19 +56,22 @@ valid_freq=args.valid_freq
 test_freq=args.test_freq
 save_freq=args.save_freq
 
-def evaluate(test_data,model):
+def evaluate(test_data,model,mode='no'):
     sumed_cost=0
     sumed_wer=[]
     n_words=[]
     idx=0
     for x,x_mask,y,y_mask in test_data:
         nll,pred_y=model.test(x,x_mask,y,y_mask)
-        #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
-        sumed_wer.append(1.)
+        if mode=='wer':
+            sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+            n_words.append(np.sum(y_mask))
+        else:
+            sumed_wer.append(1.)
+            n_words.append(1.)
         sumed_cost+=nll
-        idx+=1#np.sum(y_mask)
-        #n_words.append(np.sum(y_mask))
-        n_words.append(1.)
+        idx+=np.sum(y_mask)
+        #
     return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
 
 def train(lr):
@@ -77,7 +82,14 @@ def train(lr):
     valid_data = TextIterator(valid_datafile, n_batch=n_batch, maxlen=maxlen)
     test_data = TextIterator(test_datafile, n_batch=n_batch, maxlen=maxlen)
     print 'building model...'
-    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
+    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p,bptt=-1,level1=classes)
+    if os.path.isfile(model_dir):
+        print 'loading checkpoint parameters....',model_dir
+        model=load_model(model_dir,model)
+    if goto_line>0:
+        train_data.goto_line(goto_line)
+        print 'goto line:',goto_line
+
     print 'training start...'
     start=time.time()
     idx=0
@@ -96,6 +108,7 @@ def train(lr):
                 logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
                     epoch, idx, (error / disp_freq), np.exp(error / (1.0 * disp_freq))))
                 error=0
+            '''
             if idx%save_freq==0:
                 logger.info( 'dumping...')
                 save_model('./model/parameters_%.2f.pkl'%(time.time()-start),model)
@@ -107,7 +120,15 @@ def train(lr):
                 logger.info('testing...')
                 test_cost,wer=evaluate(test_data,model)
                 logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost),wer))
-
+            '''
+        logger.info('validing...')
+        valid_cost, wer = evaluate(valid_data, model)
+        logger.info('validation cost: %f perplexity: %f,word_error_rate:%f' % (valid_cost, np.exp(valid_cost), wer))
+        logger.info('testing...')
+        test_cost, wer = evaluate(test_data, model)
+        logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost), wer))
+        if lr>=0.001 and args.clip==True:
+            lr=lr*0.9
   
 
     print "Finished. Time = "+str(time.time()-start)
@@ -116,16 +137,17 @@ def train(lr):
 def test():
     test_data=TextIterator(test_datafile,n_batch=n_batch)
     valid_data=TextIterator(valid_datafile,n_batch=n_batch)
-    model=RNNLM(n_input,n_hidden,vocabulary_size,rnn_cell,optimizer,p)
+    model = RNNLM(n_input, n_hidden, vocabulary_size, rnn_cell, optimizer, p)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:',args.model_dir
         model=load_model(args.model_dir,model)
     else:
         print args.model_dir,'not found'
-    mean_cost=evaluate(valid_data,model)
-    print 'valid cost:',mean_cost,'perplexity:',np.exp(mean_cost)#,"word_error_rate:",mean_wer
-    mean_cost=evaluate(test_data,model)
-    print 'test cost:',mean_cost,'perplexity:',np.exp(mean_cost)
+
+    valid_cost, wer = evaluate(valid_data, model)
+    logger.info('validation cost: %f perplexity: %f,word_error_rate:%f' % (valid_cost, np.exp(valid_cost), wer))
+    test_cost, wer = evaluate(test_data, model)
+    logger.info('test cost: %f perplexity: %f,word_error_rate:%f' % (test_cost, np.exp(test_cost), wer))
 
 
 if __name__ == '__main__':
