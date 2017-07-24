@@ -138,5 +138,7 @@ class RNNLM(object):
         y_true = y_true.flatten()
         mask=self.y_mask.flatten()
         nll = T.nnet.categorical_crossentropy(y_pred, y_true)
+
         batch_nll=T.sum(nll*mask)
-        return batch_nll/ T.sum(mask)# ,batch_nll
+        return batch_nll
+        #return batch_nll/ T.sum(mask)# ,batch_nll
