@@ -1,4 +1,4 @@
-from lmkit.layers.gru import GRU
+
 from lmkit.layers.FastGRU import FastGRU
 from lmkit.layers.FastLSTM import FastLSTM
 from lmkit.layers.gru import GRU
@@ -14,17 +14,16 @@ else:
 
 
 class RNNLM(object):
-    def __init__(self, n_input, n_hidden, n_output, rnn_cell='gru', optimizer='sgd', p=0.5, n_class=10, node_maxlen=10,node_mask_path=None):
+    def __init__(self, n_input, n_hidden, n_output, n_class=10, node_maxlen=10, rnn_cell='gru', optimizer='sgd', p=0.5,node_mask_path=None):
         self.x = T.imatrix('batched_sequence_x')  # [n_batch, maxlen]: int32 matrix
         self.x_mask = T.fmatrix('x_mask')
-
         self.y_node = T.imatrix('batched_node_y')  # [2, maxlen*batch_size], 2 stands for (class_id,word_id)
-
         self.y_mask = T.fvector('y_mask')
 
         self.n_input = n_input
         self.n_hidden = n_hidden
         self.n_class = n_class
+        self.node_maxlen=node_maxlen
         self.n_output = n_output
         init_Embd = np.asarray(np.random.uniform(low=-np.sqrt(6. / (n_output + n_input)),
                                                  high=np.sqrt(6. / (n_output + n_input)),
@@ -40,7 +39,6 @@ class RNNLM(object):
         self.rng = RandomStreams(1234)
 
         self.y_node_mask = pickle.load(open(node_mask_path)) # [2, maxlen*batch_size] 2 stands for (start_index, end_index)
-        self.node_maxlen=node_maxlen
         self.build()
 
     def build(self):
@@ -67,10 +65,10 @@ class RNNLM(object):
                                     self.x, self.E, self.x_mask,
                                     self.is_train, self.p)
         print 'building softmax output layer...'
-        softmax_shape = (self.n_hidden, self.n_class, self.n_output)
+        softmax_shape = (self.n_hidden, self.n_class ,self.node_maxlen)
         output_layer = C_softmax(softmax_shape,
                                  hidden_layer.activation,
-                                 self.y_node, self.y_node_mask,self.node_maxlen)
+                                 self.y_node, self.y_node_mask)
         cost = self.categorical_crossentropy(output_layer.activation)
 
         self.params = [self.E, ]
@@ -88,7 +86,7 @@ class RNNLM(object):
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
         self.train = theano.function(inputs=[self.x, self.x_mask, self.y_node, self.y_mask, lr],
-                                     outputs=[cost,output_layer.node],
+                                     outputs=cost,
                                      updates=updates,
                                      givens={self.is_train: np.cast['int32'](1)})
         '''
@@ -101,4 +99,5 @@ class RNNLM(object):
         '''
 
     def categorical_crossentropy(self, y_pred):
+        #return -T.sum(y_pred)
         return -T.sum(y_pred * self.y_mask.flatten()) / T.sum(self.y_mask)

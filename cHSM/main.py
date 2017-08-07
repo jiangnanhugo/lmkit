@@ -18,8 +18,8 @@ lr = 0.001
 p = 0.1
 NEPOCH = 6
 
-n_input = 50
-n_hidden = 50
+n_input = 256
+n_hidden = 256
 
 optimizer = 'adam'
 
@@ -34,16 +34,16 @@ argument.add_argument('--node_mask_path', default='node_mask.pkl', type=str, hel
 argument.add_argument('--prefix_path', default='prefix.pkl', type=str,
                       help='classes and words prefix configures pickle file.')
 
-argument.add_argument('--valid_freq',default=2000,type=int,help='validation frequency')
-argument.add_argument('--save_freq',default=20000,type=int,help='save frequency')
-argument.add_argument('--test_freq',default=2000,type=int,help='test frequency')
+argument.add_argument('--valid_freq', default=2000, type=int, help='validation frequency')
+argument.add_argument('--save_freq', default=20000, type=int, help='save frequency')
+argument.add_argument('--test_freq', default=2000, type=int, help='test frequency')
 argument.add_argument('--goto_line', default=0, type=int, help='goto the specific line index')
 
 argument.add_argument('--vocab_size', default=33287, type=int, help='vocab size')
 argument.add_argument('--batch_size', default=2, type=int, help='batch size')
 argument.add_argument('--rnn_cell', default='gru', type=str, help='recurrent unit type')
 argument.add_argument('--mode', default='train', type=str, help='train/valid/test')
-argument.add_argument('--maxlen',default=200,type=int,help='constrain the maxlen for training')
+argument.add_argument('--maxlen', default=200, type=int, help='constrain the maxlen for training')
 
 args = argument.parse_args()
 
@@ -55,71 +55,70 @@ vocab_size = args.vocab_size
 rnn_cell = args.rnn_cell
 prefix_path = args.prefix_path
 node_mask_path = args.node_mask_path
-maxlen=args.maxlen
+maxlen = args.maxlen
 model_dir = args.model_dir
 reload_dumps = args.reload_dumps
 
 disp_freq = 4
-goto_line=args.goto_line
-valid_freq=args.valid_freq
-test_freq=args.test_freq
-save_freq=args.save_freq
+goto_line = args.goto_line
+valid_freq = args.valid_freq
+test_freq = args.test_freq
+save_freq = args.save_freq
 
 
-def evaluate(test_data,model):
-    sumed_cost=0
-    sumed_wer=[]
-    n_words=[]
-    idx=0
-    for x,x_mask,y,y_mask in test_data:
-        #nll,pred_y=model.test(x,x_mask,y,y_mask)
-        #sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
+def evaluate(test_data, model):
+    sumed_cost = 0
+    sumed_wer = []
+    n_words = []
+    idx = 0
+    for x, x_mask, y, y_mask in test_data:
+        # nll,pred_y=model.test(x,x_mask,y,y_mask)
+        # sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
         sumed_wer.append(1.)
-        sumed_cost+=1.0
-        idx+=1#np.sum(y_mask)
-        #n_words.append(np.sum(y_mask))
+        sumed_cost += 1.0
+        idx += 1  # np.sum(y_mask)
+        # n_words.append(np.sum(y_mask))
         n_words.append(1.)
-    return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
+    return sumed_cost / (1.0 * idx), np.sum(sumed_wer) / np.sum(n_words)
 
 
 def train(lr):
     # Load data
     logger.info('loading dataset...')
 
-    train_data = TextIterator(train_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
-    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
-    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch,maxlen=maxlen)
+    train_data = TextIterator(train_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
+    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
+    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
 
     logger.info('building model...')
-    model = RNNLM(n_input, n_hidden, vocab_size, rnn_cell=rnn_cell, optimizer=optimizer, p=p,
-                  n_class=train_data.n_class, node_maxlen=train_data.node_maxlen, node_mask_path=node_mask_path)
+    model = RNNLM(n_input, n_hidden, vocab_size, n_class=train_data.n_class, node_maxlen=train_data.node_maxlen,
+                  rnn_cell=rnn_cell, optimizer=optimizer, p=p,node_mask_path=node_mask_path)
 
     if os.path.exists(model_dir) and reload_dumps == 1:
         logger.info('loading parameters from: %s' % model_dir)
         model = load_model(model_dir, model)
     else:
         print "init parameters...."
-    if goto_line>0:
+    if goto_line > 0:
         train_data.goto_line(goto_line)
-        print 'goto line:',goto_line
+        print 'goto line:', goto_line
     print 'training start...'
-    start=time.time()
-    idx=goto_line
+    start = time.time()
+    idx = goto_line
     logger.info('training start...')
     for epoch in xrange(NEPOCH):
         error = 0
         for x, x_mask, y_node, y_mask in train_data:
             idx += 1
-
-            cost,logprob= model.train(x, x_mask, y_node, y_mask, lr)
-
+            #cost, logprob = model.train(x, x_mask, y_node, y_mask, lr)
+            cost = model.train(x, x_mask, y_node, y_mask, lr)
             error += cost
             if np.isnan(cost) or np.isinf(cost):
                 print 'NaN Or Inf detected!'
                 return -1
             if idx % disp_freq == 0:
                 logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
-                epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
+                    epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
                 error = 0
             if idx % save_freq == 0:
                 print 'dumping...'
@@ -132,16 +131,8 @@ def train(lr):
                 logger.info('testing...')
                 test_cost = evaluate(test_data, model)
                 logger.info('test cost: %f perplexity: %f' % (test_cost, np.exp(test_cost)))
-                # if idx % pred_freq==0:
-                # print 'predicting...'
-                # prediction=model.predict(x,x_mask,x.shape[1])
-                # print prediction[:100]
-            '''
-            if idx%clip_freq==0 and lr >=1e-2:
-                print 'cliping learning rate:',
-                lr=lr*0.9
-                print lr
-            '''
+
+
         sys.stdout.flush()
 
     print "Finished. Time = " + str(time.time() - start)
