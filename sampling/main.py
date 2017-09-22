@@ -68,8 +68,11 @@ def evaluate(test_data,model,mode='no'):
     sumed_wer=[]
     n_words=[]
     idx=0
+    logger.info('testing...')
     for x,x_mask,y,y_mask in test_data:
+
         nll,pred_y=model.test(x,x_mask,y,y_mask)
+        print nll,
         if mode=='wer':
             sumed_wer.append(calculate_wer(y,y_mask,np.reshape(pred_y, y.shape)))
             n_words.append(np.sum(y_mask))
@@ -77,8 +80,10 @@ def evaluate(test_data,model,mode='no'):
             sumed_wer.append(1.)
             n_words.append(1.)
         sumed_cost+=nll
+        
         idx+=np.sum(y_mask)
         #
+    
     return sumed_cost/(1.0*idx),np.sum(sumed_wer)/np.sum(n_words)
 
 
