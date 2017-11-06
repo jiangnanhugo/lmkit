@@ -1,29 +1,15 @@
 # lmkit
 
 ## accepted paper
+
 Exploration of Tree-based Hierarchical Softmax for Recurrent Language Models. IJCAI 2017.
 
-## original
+1. original: Recurrent Language Model (RNNLM) with LSTM/GRU cells
 
-- RNNLM with LSTM/GRU
+2. Nce: noise contrastive estimation for RNNLM
 
-## nce
+3. Blackout: Blackout approximation for RNNLM 
 
--  noise contrastive estimation for RNNLM
+4. p-tHSM: paralleled tree-based hierarchical softmax for RNNLM
 
-## Blackout
-
-- Blackout approximation algorithm for RNNLM 
-
-## p-tHSM
-
-- paralized tree-based hierarchical softmax model
-
-## tHSM
-
-- tree-based hierarchical softmax model with huffman coding
-
-
-
-
-
+5. tHSM: traditional tree-based hierarchical softmax with Huffman coding for RNNLM
