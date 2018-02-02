@@ -14,16 +14,13 @@ from argparse import ArgumentParser
 import sys
 import os
 
-lr = 0.001
-p = 0.1
-NEPOCH = 6
-
-n_input = 256
-n_hidden = 256
-
-optimizer = 'adam'
-
 argument = ArgumentParser(usage='it is usage tip', description='no')
+argument.add_argument('--n_input', default=256, type=int, help='word vector dimension')
+argument.add_argument('--n_hidden', default=256, type=int, help='hidden vector dimension')
+argument.add_argument('--nepoch', default=6, type=int, help='epoch over the dataset')
+argument.add_argument('--optimizer', default='adam', type=str, help='gradient optimizer')
+argument.add_argument('--droput_drop', default=0.1, type=float, help='dropout rate of dropped')
+argument.add_argument('--lr', default=0.001, type=float, help='learning rate')
 argument.add_argument('--model_dir', default='./model/parameters.pkl', type=str,
                       help='trained model file as checkpoints')
 argument.add_argument('--reload_dumps', default=0, type=int, help='reload trained model')
@@ -64,7 +61,12 @@ goto_line = args.goto_line
 valid_freq = args.valid_freq
 test_freq = args.test_freq
 save_freq = args.save_freq
-
+n_input=args.n_input
+n_hidden=args.n_hidden
+lr=args.lr
+optimizer=args.optimizer
+NEPOCH=args.nepoch
+p=args.dropout_drop
 
 def evaluate(test_data, model):
     sumed_cost = 0
@@ -82,7 +84,7 @@ def evaluate(test_data, model):
     return sumed_cost / (1.0 * idx), np.sum(sumed_wer) / np.sum(n_words)
 
 
-def train(lr):
+def train_by_batch(lr):
     # Load data
     logger.info('loading dataset...')
 
@@ -91,7 +93,7 @@ def train(lr):
     test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
 
     logger.info('building model...')
-    model = RNNLM(n_input, n_hidden, vocab_size, n_class=train_data.n_class, node_maxlen=train_data.node_maxlen,
+    model = RNNLM(n_input, n_hidden, vocab_size, n_class=train_data.n_class, node_len=train_data.node_maxlen,
                   rnn_cell=rnn_cell, optimizer=optimizer, p=p,node_mask_path=node_mask_path)
 
     if os.path.exists(model_dir) and reload_dumps == 1:
@@ -138,11 +140,59 @@ def train(lr):
     print "Finished. Time = " + str(time.time() - start)
 
 
+def train_by_epoch(lr):
+    # Load data
+    logger.info('loading dataset...')
+
+    train_data = TextIterator(train_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
+    valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
+    test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch, maxlen=maxlen)
+
+    logger.info('building model...')
+    model = RNNLM(n_input, n_hidden, vocab_size, n_class=train_data.n_class, node_len=train_data.node_maxlen,
+                  rnn_cell=rnn_cell, optimizer=optimizer, p=p,node_mask_path=node_mask_path)
+
+    if os.path.exists(model_dir) and reload_dumps == 1:
+        logger.info('loading parameters from: %s' % model_dir)
+        model = load_model(model_dir, model)
+    else:
+        print "init parameters...."
+    if goto_line > 0:
+        train_data.goto_line(goto_line)
+        print 'goto line:', goto_line
+
+    start = time.time()
+    idx = goto_line
+    logger.info('training start...')
+    for epoch in xrange(NEPOCH):
+        error = 0
+        for x, x_mask, y_node, y_mask in train_data:
+            idx += 1
+            #cost, logprob = model.train(x, x_mask, y_node, y_mask, lr)
+            cost = model.train(x, x_mask, y_node, y_mask, lr)
+            error += cost
+            if np.isnan(cost) or np.isinf(cost):
+                print 'NaN Or Inf detected!'
+                return -1
+            if idx % disp_freq == 0:
+                logger.info('epoch: %d idx: %d cost: %f ppl: %f' % (
+                    epoch, idx, error / disp_freq, np.exp(error / (1.0 * disp_freq))))
+                error = 0
+        save_model('./model/parameters_%.2f.pkl' % (time.time() - start), model)
+        valid_cost = evaluate(valid_data, model)
+        logger.info('valid_cost: %f perplexity: %f' % (valid_cost, np.exp(valid_cost)))
+        test_cost = evaluate(test_data, model)
+        logger.info('test cost: %f perplexity: %f' % (test_cost, np.exp(test_cost)))
+        sys.stdout.flush()
+
+    print "Finished. Time = " + str(time.time() - start)
+
+
 def test():
     valid_data = TextIterator(valid_datafile, prefix_path=prefix_path, n_batch=n_batch)
     test_data = TextIterator(test_datafile, prefix_path=prefix_path, n_batch=n_batch)
     model = RNNLM(n_input, n_hidden, vocab_size, rnn_cell=rnn_cell, optimizer=optimizer, p=p,
-                  n_class=valid_data.n_class, node_maxlen=valid_data.node_maxlen, node_mask_path=node_mask_path)
+                  n_class=valid_data.n_class, node_len=valid_data.node_maxlen, node_mask_path=node_mask_path)
     if os.path.isfile(args.model_dir):
         print 'loading pretrained model:', args.model_dir
         model = load_model(args.model_dir, model)
@@ -156,6 +206,6 @@ def test():
 
 if __name__ == '__main__':
     if args.mode == 'train':
-        train(lr=lr)
+        train_by_epoch(lr=lr)
     elif args.mode == 'testing':
         test()

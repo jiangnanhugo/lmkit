@@ -14,16 +14,16 @@ else:
 
 
 class RNNLM(object):
-    def __init__(self, n_input, n_hidden, n_output, n_class=10, node_maxlen=10, rnn_cell='gru', optimizer='sgd', p=0.5,node_mask_path=None):
-        self.x = T.imatrix('batched_sequence_x')  # [n_batch, maxlen]: int32 matrix
+    def __init__(self, n_input, n_hidden, n_output, n_class=10, node_len=10, rnn_cell='gru', optimizer='sgd', p=0.5,node_mask_path=None):
+        self.x = T.imatrix('batched_sequence_x')  # [n_batch, nodelen]: int32 matrix
         self.x_mask = T.fmatrix('x_mask')
-        self.y_node = T.imatrix('batched_node_y')  # [2, maxlen*batch_size], 2 stands for (class_id,word_id)
+        self.y_node = T.imatrix('batched_node_y')  # [2, nodelen*batch_size], 2 stands for (class_id,word_id)
         self.y_mask = T.fvector('y_mask')
 
         self.n_input = n_input
         self.n_hidden = n_hidden
         self.n_class = n_class
-        self.node_maxlen=node_maxlen
+        self.node_len=node_len
         self.n_output = n_output
         init_Embd = np.asarray(np.random.uniform(low=-np.sqrt(6. / (n_output + n_input)),
                                                  high=np.sqrt(6. / (n_output + n_input)),
@@ -44,28 +44,17 @@ class RNNLM(object):
     def build(self):
         print 'building rnn cell...'
         hidden_layer=None
+        rnn_params=[self.rng,self.n_input, self.n_hidden,self.x, self.E, self.x_mask, self.is_train, self.p]
         if self.rnn_cell == 'gru':
-            hidden_layer = GRU(self.rng,
-                               self.n_input, self.n_hidden,
-                               self.x, self.E, self.x_mask,
-                               self.is_train, self.p)
+            hidden_layer = GRU(*rnn_params)
         elif self.rnn_cell == 'fastgru':
-            hidden_layer = FastGRU(self.rng,
-                                   self.n_input, self.n_hidden,
-                                   self.x, self.E, self.x_mask,
-                                   self.is_train, self.p)
+            hidden_layer = FastGRU(*rnn_params)
         elif self.rnn_cell == 'lstm':
-            hidden_layer = LSTM(self.rng,
-                                self.n_input, self.n_hidden,
-                                self.x, self.E, self.x_mask,
-                                self.is_train, self.p)
+            hidden_layer = LSTM(*rnn_params)
         elif self.rnn_cell == 'fastlstm':
-            hidden_layer = FastLSTM(self.rng,
-                                    self.n_input, self.n_hidden,
-                                    self.x, self.E, self.x_mask,
-                                    self.is_train, self.p)
+            hidden_layer = FastLSTM(*rnn_params)
         print 'building softmax output layer...'
-        softmax_shape = (self.n_hidden, self.n_class ,self.node_maxlen)
+        softmax_shape = (self.n_hidden, self.n_class ,self.node_len)
         output_layer = C_softmax(softmax_shape,
                                  hidden_layer.activation,
                                  self.y_node, self.y_node_mask)
