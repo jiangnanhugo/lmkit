@@ -1,0 +1,99 @@
+==================
+  Message: /home/t-najia/workspace/lmkit/original/rnnlm.py:90
+  Time in 20 calls to Function.__call__: 1.401029e+01s
+  Time in Function.fn.__call__: 1.400757e+01s (99.981%)
+  Time in thunks: 1.400481e+01s (99.961%)
+  Total compile time: 1.854191e+01s
+    Number of Apply nodes: 81
+    Theano Optimizer time: 7.855902e-01s
+       Theano validate time: 3.231192e-02s
+    Theano Linker time (includes C, CUDA code generation/compiling): 1.764142e+01s
+       Import time 1.398563e-02s
+       Node make_thunk time 1.763499e+01s
+           Node GpuElemwise{Composite{Switch(i0, (i1 * i2 * i3), (i4 * i1 * i2))}}[]<gpuarray>(InplaceGpuDimShuffle{x,x,x}.0, GpuDnnRNNOp.1, InplaceGpuDimShuffle{0,1,x}.0, GpuElemwise{Composite{Cast{float32}(LT(i0, i1))}}[(0, 0)]<gpuarray>.0, GpuArrayConstant{[[[ 0.89999998]]]}) time 1.837057e+00s
+           Node GpuElemwise{Composite{(Switch(i0, (i1 * i2), (i3 * i2)) * i4)}}[(0, 1)]<gpuarray>(InplaceGpuDimShuffle{x,x,x}.0, GpuElemwise{Composite{Cast{float32}(LT(i0, i1))}}[(0, 0)]<gpuarray>.0, GpuReshape{3}.0, GpuArrayConstant{[[[ 0.89999998]]]}, InplaceGpuDimShuffle{0,1,x}.0) time 1.804380e+00s
+           Node GpuElemwise{Composite{Cast{float32}(LT(i0, i1))}}[(0, 0)]<gpuarray>(GPUA_mrg_uniform{GpuArrayType<None>(float32, (False, False, False)),inplace}.1, GpuArrayConstant{[[[ 0.89999998]]]}) time 1.794757e+00s
+           Node GpuCAReduceCuda{add}{0}(GpuCrossentropySoftmax1HotWithBiasDx.0) time 9.111431e-01s
+           Node GpuCAReduceCuda{add}(GpuReshape{1}.0) time 8.922899e-01s
+
+Time in all call to theano.grad() 4.936385e-02s
+Time since theano import 37.708s
+Class
+---
+<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Class name>
+  66.1%    66.1%       9.253s       4.63e-01s     C       20       1   theano.gpuarray.dnn.GpuDnnRNNGradInputs
+  12.8%    78.9%       1.791s       2.98e-02s     C       60       3   theano.gpuarray.blas.GpuDot22
+   7.5%    86.4%       1.057s       5.28e-02s     C       20       1   theano.gpuarray.dnn.GpuDnnRNNOp
+   4.7%    91.1%       0.652s       3.26e-02s     C       20       1   theano.gpuarray.nnet.GpuCrossentropySoftmaxArgmax1HotWithBias
+   3.1%    94.2%       0.435s       8.71e-04s     C      500      25   theano.gpuarray.elemwise.GpuElemwise
+   2.0%    96.1%       0.275s       1.38e-02s     C       20       1   theano.gpuarray.subtensor.GpuAdvancedSubtensor1
+   1.5%    97.6%       0.208s       1.04e-02s     C       20       1   theano.gpuarray.nnet.GpuCrossentropySoftmax1HotWithBiasDx
+   1.4%    99.0%       0.192s       3.21e-03s     C       60       3   theano.gpuarray.elemwise.GpuCAReduceCuda
+   0.6%    99.6%       0.088s       4.41e-03s     C       20       1   theano.gpuarray.dnn.GpuDnnRNNGradWeights
+   0.2%    99.8%       0.024s       5.89e-04s     C       40       2   theano.gpuarray.basic_ops.GpuAlloc
+   0.1%    99.9%       0.015s       7.48e-04s     C       20       1   theano.gpuarray.subtensor.GpuAdvancedIncSubtensor1_dev20
+   0.1%   100.0%       0.011s       5.34e-04s     C       20       1   theano.sandbox.rng_mrg.GPUA_mrg_uniform
+   0.0%   100.0%       0.002s       2.02e-05s     C      120       6   theano.gpuarray.basic_ops.GpuFromHost
+   0.0%   100.0%       0.000s       2.47e-05s     C       20       1   theano.gpuarray.basic_ops.HostFromGpu
+   0.0%   100.0%       0.000s       3.47e-06s     C      140       7   theano.gpuarray.elemwise.GpuDimShuffle
+   0.0%   100.0%       0.000s       3.45e-06s     C      140       7   theano.gpuarray.basic_ops.GpuReshape
+   0.0%   100.0%       0.000s       1.61e-06s     C      160       8   theano.compile.ops.Shape_i
+   0.0%   100.0%       0.000s       1.65e-06s     C       80       4   theano.tensor.opt.MakeVector
+   0.0%   100.0%       0.000s       1.78e-06s     C       40       2   theano.scalar.basic.Cast
+   0.0%   100.0%       0.000s       1.65e-06s     C       40       2   theano.tensor.basic.ScalarFromTensor
+   ... (remaining 2 Classes account for   0.00%(0.00s) of the runtime)
+
+Ops
+---
+<% time> <sum %> <apply time> <time per call> <type> <#call> <#apply> <Op name>
+  66.1%    66.1%       9.253s       4.63e-01s     C       20        1   GpuDnnRNNGradInputs{rnn_mode='lstm', grad_c=False, grad_h=False}
+  12.8%    78.9%       1.791s       2.98e-02s     C       60        3   GpuDot22
+   7.5%    86.4%       1.057s       5.28e-02s     C       20        1   GpuDnnRNNOp
+   4.7%    91.1%       0.652s       3.26e-02s     C       20        1   GpuCrossentropySoftmaxArgmax1HotWithBias
+   2.0%    93.0%       0.275s       1.38e-02s     C       20        1   GpuAdvancedSubtensor1
+   1.5%    94.5%       0.208s       1.04e-02s     C       20        1   GpuCrossentropySoftmax1HotWithBiasDx
+   1.3%    95.8%       0.177s       8.86e-03s     C       20        1   GpuCAReduceCuda{add}{0}
+   0.7%    96.5%       0.102s       1.28e-03s     C       80        4   GpuElemwise{Composite{(i0 - ((i1 * i2) / (i3 + sqrt(i4))))}}[(0, 0)]<gpuarray>
+   0.6%    97.1%       0.088s       4.41e-03s     C       20        1   GpuDnnRNNGradWeights
+   0.6%    97.7%       0.085s       1.07e-03s     C       80        4   GpuElemwise{Clip}[(0, 0)]<gpuarray>
+   0.5%    98.3%       0.072s       9.06e-04s     C       80        4   GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>
+   0.4%    98.7%       0.063s       7.83e-04s     C       80        4   GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>
+   0.3%    99.0%       0.040s       1.98e-03s     C       20        1   GpuElemwise{Composite{(Switch(i0, (i1 * i2), (i3 * i2)) * i4)}}[(0, 1)]<gpuarray>
+   0.2%    99.2%       0.024s       5.89e-04s     C       40        2   GpuAlloc<None>{memset_0=True}
+   0.1%    99.3%       0.018s       8.97e-04s     C       20        1   GpuElemwise{Composite{((i0 * sqrt((i1 - (i2 ** i3)))) / (i4 - (i5 ** i3)))}}[(0, 0)]<gpuarray>
+   0.1%    99.4%       0.015s       3.78e-04s     C       40        2   GpuCAReduceCuda{add}
+   0.1%    99.5%       0.015s       7.48e-04s     C       20        1   GpuAdvancedIncSubtensor1_dev20{inplace=True, set_instead_of_inc=False}
+   0.1%    99.6%       0.014s       7.09e-04s     C       20        1   GpuElemwise{Add}[(0, 1)]<gpuarray>
+   0.1%    99.7%       0.013s       3.37e-04s     C       40        2   GpuElemwise{TrueDiv}[(0, 0)]<gpuarray>
+   0.1%    99.8%       0.011s       5.34e-04s     C       20        1   GPUA_mrg_uniform{GpuArrayType<None>(float32, (False, False, False)),inplace}
+   ... (remaining 23 Ops account for   0.23%(0.03s) of the runtime)
+
+Apply
+------
+<% time> <sum %> <apply time> <time per call> <#call> <id> <Apply name>
+  66.1%    66.1%       9.253s       4.63e-01s     20    69   GpuDnnRNNGradInputs{rnn_mode='lstm', grad_c=False, grad_h=False}(Constant{<capsule o...7d8df6540>}, Cast{uint64}.0, GpuDnnRNNOp.1, GpuElemwise{Composite{(Switch(i0, (i1 * i2), (i3 * i2)) * i4)}}[(0, 1)]<gpuarray>.0, <GpuArrayType<None>(float32, (False,))>, GpuAlloc<None>{memset_0=True}.0, GpuDnnRNNOp.0, GpuAlloc<None>{memset_0=True}.0)
+   7.5%    73.6%       1.057s       5.28e-02s     20    37   GpuDnnRNNOp(Constant{<capsule o...7d8df6540>}, Constant{1}, <GpuArrayType<None>(float32, (False,))>, GpuReshape{3}.0, GpuAlloc<None>{memset_0=True}.0, GpuAlloc<None>{memset_0=True}.0)
+   5.1%    78.7%       0.711s       3.55e-02s     20    47   GpuDot22(GpuReshape{2}.0, output_W)
+   4.7%    83.3%       0.652s       3.26e-02s     20    49   GpuCrossentropySoftmaxArgmax1HotWithBias(GpuDot22.0, output_b, GpuReshape{1}.0)
+   4.5%    87.9%       0.632s       3.16e-02s     20    57   GpuDot22(GpuCrossentropySoftmax1HotWithBiasDx.0, InplaceGpuDimShuffle{1,0}.0)
+   3.2%    91.1%       0.448s       2.24e-02s     20    56   GpuDot22(InplaceGpuDimShuffle{1,0}.0, GpuCrossentropySoftmax1HotWithBiasDx.0)
+   2.0%    93.0%       0.275s       1.38e-02s     20    34   GpuAdvancedSubtensor1(word_embedding, GpuContiguous.0)
+   1.5%    94.5%       0.208s       1.04e-02s     20    53   GpuCrossentropySoftmax1HotWithBiasDx(GpuElemwise{TrueDiv}[(0, 0)]<gpuarray>.0, GpuCrossentropySoftmaxArgmax1HotWithBias.1, GpuReshape{1}.0)
+   1.3%    95.8%       0.177s       8.86e-03s     20    55   GpuCAReduceCuda{add}{0}(GpuCrossentropySoftmax1HotWithBiasDx.0)
+   0.6%    96.4%       0.088s       4.41e-03s     20    70   GpuDnnRNNGradWeights(Constant{<capsule o...7d8df6540>}, Cast{uint64}.0, GpuReshape{3}.0, GpuAlloc<None>{memset_0=True}.0, GpuDnnRNNOp.1, GpuDnnRNNGradInputs{rnn_mode='lstm', grad_c=False, grad_h=False}.0)
+   0.4%    96.8%       0.052s       2.61e-03s     20    77   GpuElemwise{Composite{(i0 - ((i1 * i2) / (i3 + sqrt(i4))))}}[(0, 0)]<gpuarray>(<GpuArrayType<None>(float32, (False,))>, InplaceGpuDimShuffle{x}.0, GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>.0, GpuArrayConstant{[  9.99999994e-09]}, GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>.0)
+   0.3%    97.1%       0.040s       1.98e-03s     20    66   GpuElemwise{Composite{(Switch(i0, (i1 * i2), (i3 * i2)) * i4)}}[(0, 1)]<gpuarray>(InplaceGpuDimShuffle{x,x,x}.0, GpuElemwise{Composite{Cast{float32}(LT(i0, i1))}}[(0, 0)]<gpuarray>.0, GpuReshape{3}.0, GpuArrayConstant{[[[ 0.89999998]]]}, InplaceGpuDimShuffle{0,1,x}.0)
+   0.3%    97.3%       0.035s       1.76e-03s     20    72   GpuElemwise{Clip}[(0, 0)]<gpuarray>(GpuDnnRNNGradWeights.0, GpuArrayConstant{[-10]}, GpuArrayConstant{[10]})
+   0.2%    97.5%       0.034s       1.69e-03s     20    64   GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>(GpuArrayConstant{[[ 0.99900001]]}, <GpuArrayType<None>(float32, (False, False))>, GpuArrayConstant{[[ 0.00099999]]}, GpuElemwise{Clip}[(0, 0)]<gpuarray>.0)
+   0.2%    97.7%       0.024s       1.19e-03s     20    80   GpuElemwise{Composite{(i0 - ((i1 * i2) / (i3 + sqrt(i4))))}}[(0, 0)]<gpuarray>(word_embedding, InplaceGpuDimShuffle{x,x}.0, GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>.0, GpuArrayConstant{[[  9.99999994e-09]]}, GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>.0)
+   0.2%    97.9%       0.024s       1.19e-03s     20    79   GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>(GpuArrayConstant{[[ 0.89999998]]}, <GpuArrayType<None>(float32, (False, False))>, GpuArrayConstant{[[ 0.10000002]]}, GpuElemwise{Clip}[(0, 0)]<gpuarray>.0)
+   0.2%    98.0%       0.022s       1.12e-03s     20    76   GpuElemwise{Clip}[(0, 0)]<gpuarray>(GpuAdvancedIncSubtensor1_dev20{inplace=True, set_instead_of_inc=False}.0, GpuArrayConstant{[[-10]]}, GpuArrayConstant{[[10]]})
+   0.1%    98.2%       0.020s       1.02e-03s     20    78   GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>(GpuArrayConstant{[[ 0.99900001]]}, <GpuArrayType<None>(float32, (False, False))>, GpuArrayConstant{[[ 0.00099999]]}, GpuElemwise{Clip}[(0, 0)]<gpuarray>.0)
+   0.1%    98.3%       0.019s       9.66e-04s     20    68   GpuElemwise{Composite{(i0 - ((i1 * i2) / (i3 + sqrt(i4))))}}[(0, 0)]<gpuarray>(output_W, InplaceGpuDimShuffle{x,x}.0, GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>.0, GpuArrayConstant{[[  9.99999994e-09]]}, GpuElemwise{Composite{((i0 * i1) + (i2 * sqr(i3)))}}[(0, 1)]<gpuarray>.0)
+   0.1%    98.5%       0.019s       9.35e-04s     20    65   GpuElemwise{Composite{((i0 * i1) + (i2 * i3))}}[(0, 1)]<gpuarray>(GpuArrayConstant{[[ 0.89999998]]}, <GpuArrayType<None>(float32, (False, False))>, GpuArrayConstant{[[ 0.10000002]]}, GpuElemwise{Clip}[(0, 0)]<gpuarray>.0)
+   ... (remaining 61 Apply instances account for 1.54%(0.22s) of the runtime)
+
+Here are tips to potentially make your code run faster
+                 (if you think of new ones, suggest them on the mailing list).
+                 Test them first, as they are not guaranteed to always provide a speedup.
+  - Try installing amdlibm and set the Theano flag lib.amdlibm=True. This speeds up only some Elemwise operation.

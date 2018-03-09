@@ -1,0 +1,1 @@
+recurrent language model with softmax function
