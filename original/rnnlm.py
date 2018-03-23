@@ -68,7 +68,7 @@ class RNNLM(object):
 
         print 'building softmax output layer...'
         output_layer = softmax(self.n_hidden, self.n_output, hidden_layer.activation)
-        cost= self.categorical_crossentropy(output_layer.activation, self.y) # nll
+        cost,batch_nll= self.categorical_crossentropy(output_layer.activation, self.y) # nll
         self.params = [self.E, ]
         self.params += hidden_layer.params
         self.params += output_layer.params
@@ -85,7 +85,7 @@ class RNNLM(object):
             updates=rmsprop(params=self.params,grads=gparams,learning_rate=lr)
 
         self.train = theano.function(inputs=[self.x, self.x_mask, self.y, self.y_mask, lr],
-                                     outputs=cost,
+                                     outputs=[cost,batch_nll],
                                      updates=updates,
                                      givens={self.is_train: np.cast['int32'](1)})
         '''
@@ -94,7 +94,7 @@ class RNNLM(object):
                                      givens={self.is_train:np.cast['int32'](1)})
         '''
         self.test = theano.function(inputs=[self.x, self.x_mask,self.y,self.y_mask],
-                                       outputs=[cost,output_layer.predict],
+                                       outputs=[batch_nll,output_layer.predict],
                                        givens={self.is_train: np.cast['int32'](0)})
 
     def categorical_crossentropy(self, y_pred, y_true):
@@ -102,4 +102,4 @@ class RNNLM(object):
         mask=self.y_mask.flatten()
         nll = T.nnet.categorical_crossentropy(y_pred, y_true)
         batch_nll=T.sum(nll*mask)
-        return batch_nll/ T.sum(mask)# ,batch_nll
+        return batch_nll/ T.sum(mask),batch_nll
